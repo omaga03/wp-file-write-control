@@ -502,11 +502,10 @@ class WP_File_Write_Control
     }
 
     /* =========================================
-     * [CORE] 1. Centralized Status Checker (หัวใจหลัก)
+     * [CORE] 1. Centralized Status Checker (Updated: Real Write Test)
      * ========================================= */
     private function get_target_info($type)
     {
-        // 1. ระบุ Path
         $dirs = [];
         $label = '';
         if ($type === 'upload') {
@@ -522,34 +521,38 @@ class WP_File_Write_Control
 
         $path = isset($dirs[0]) ? $dirs[0] : '';
 
-        // ถ้าหาโฟลเดอร์ไม่เจอ
         if (!$path || !is_dir($path)) {
             return ['exists' => false];
         }
 
-        // 2. [สำคัญ] ล้าง Cache ทิ้งเดี๋ยวนี้! และอ่านค่าจริงจาก Disk
+        // ล้าง Cache สถานะไฟล์
         clearstatcache(true, $path);
-
-        // 3. อ่าน Permission จริง (เช่น 775, 555)
         $perm_num = substr(sprintf('%o', fileperms($path)), -3);
 
-        // 4. ตัดสินจาก "ความสามารถในการเขียนจริง" (Writeable)
-        // ไม่สน Database ว่าจำอะไรไว้ ให้เชื่อไฟล์จริงเท่านั้น
-        $is_writable = is_writable($path);
+        // [New] เช็คด้วยการ "ลองเขียนไฟล์จริง" (Real Write Test)
+        // เพื่อความชัวร์ที่สุดว่า PHP เขียนได้จริงหรือไม่
+        $test_file = $path . '/.wfwc_check.tmp';
+        $is_writable = false;
 
-        // 5. เตรียมข้อมูล Timeout (ถ้ามี)
+        if (@file_put_contents($test_file, 'test') !== false) {
+            $is_writable = true;
+            @unlink($test_file); // เขียนได้แล้วลบทิ้ง
+        } else {
+            // Fallback: ถ้าเขียนไม่ได้ ลองเช็คฟังก์ชันพื้นฐาน
+            $is_writable = is_writable($path);
+        }
+
         $s = $this->state();
         $ttl_min = floor($this->get_timeout_seconds() / 60);
         $expire_ts = isset($s['expire_' . $type]) ? $s['expire_' . $type] : 0;
 
-        // 6. Logic ของปุ่ม (ถ้าเขียนได้ = สถานะเปิด -> ปุ่มต้องโชว์ปิด)
         return [
             'exists' => true,
             'type' => $type,
             'label' => $label,
             'path' => $path,
             'perm' => $perm_num,
-            'is_open' => $is_writable,     // True = เขียนได้ (เขียว)
+            'is_open' => $is_writable,
             'color' => $is_writable ? '#16a34a' : '#dc2626',
             'bg' => $is_writable ? '#dcfce7' : '#fee2e2',
             'btn_text' => $is_writable ? '🔒 ปิดทันที' : "🔓 เปิด $ttl_min นาที",
@@ -560,7 +563,8 @@ class WP_File_Write_Control
     }
 
     /* =========================================
-     * [CORE] AJAX HANDLER
+     * [CORE] AJAX HANDLER (Real Check & Retry Prompt)
+     * ถ้าเปลี่ยนไม่สำเร็จ จะแจ้ง User ให้กดปุ่มซ้ำ
      * ========================================= */
     public function ajax_toggle_upload()
     {
@@ -568,93 +572,73 @@ class WP_File_Write_Control
         if (!current_user_can('manage_options'))
             wp_send_json_error('Denied');
 
+        @set_time_limit(0);
         $type = sanitize_key($_POST['type'] ?? 'upload');
 
-        // 1. เช็คสถานะปัจจุบัน (Real-time)
+        // เช็คสถานะปัจจุบัน
         $info_current = $this->get_target_info($type);
+        $should_open = !$info_current['is_open']; // ถ้าปิดอยู่ -> เราจะเปิด
+        $dirs = $this->get_dirs_by_type($type);
 
-        // 2. กำหนดเป้าหมาย: ถ้าเปิดอยู่ -> ต้องปิด, ถ้าปิด -> ต้องเปิด
-        $should_open = !$info_current['is_open'];
-        $dirs = $this->get_dirs_by_type($type); // Helper function (ดูด้านล่าง)
-
-        // 3. สั่งเปลี่ยนสิทธิ์ (Action)
+        // --- ACTION (สั่งเปลี่ยนสิทธิ์แบบธรรมดา) ---
         if ($should_open) {
-            $this->chmod_dirs($dirs, 0775); // หรือ 0777
-
-            // Update DB
+            $this->chmod_dirs($dirs, 0775);
+            // Update DB ล่วงหน้า (ถ้าสำเร็จ)
             $s = $this->state();
             $s[$type] = true;
             $s['expire_' . $type] = time() + $this->get_timeout_seconds();
-
-            // Handle Upgrade dir
             if ($type == 'plugin' || $type == 'theme') {
                 $this->chmod_dirs($this->upgrade_dirs(), 0775);
                 @chmod(ABSPATH . '.htaccess', 0644);
             }
-            $this->log_activity("เปิด $type (AJAX)");
+            $this->log_activity("เปิด $type");
         } else {
             $this->chmod_dirs($dirs, 0555);
-
-            // Update DB
             $s = $this->state();
             $s[$type] = false;
             $s['expire_' . $type] = null;
-
             if ($type != 'upload' && !$s['plugin'] && !$s['theme']) {
                 $this->chmod_dirs($this->upgrade_dirs(), 0555);
                 @chmod(ABSPATH . '.htaccess', 0444);
             }
-            $this->log_activity("ปิด $type (AJAX)");
+            $this->log_activity("ปิด $type");
         }
+        $this->save($s); // บันทึกค่าไปก่อน
 
-        // Save Cron
-        if ($s['upload'] || $s['plugin'] || $s['theme']) {
-            if (!wp_next_scheduled(self::CRON_HOOK))
-                wp_schedule_event(time(), 'every_minute', self::CRON_HOOK);
-        } else {
-            wp_clear_scheduled_hook(self::CRON_HOOK);
-        }
-        $this->save($s);
+        // --- VERIFY (ตรวจสอบของจริง) ---
+        // พักแป๊บนึง ให้ Server หายใจ (0.5 วินาที)
+        usleep(500000);
 
-        // =========================================================
-        // วนลูปเช็คสถานะไฟล์จริง 10 รอบ (รอบละ 0.1 วิ)
-        // =========================================================
-        $final_info = [];
-        $max_retries = 10;
+        // ตรวจสอบสถานะล่าสุดจากไฟล์จริง
+        if (isset($dirs[0]))
+            clearstatcache(true, $dirs[0]);
+        $final_check = $this->get_target_info($type);
 
-        for ($i = 0; $i < $max_retries; $i++) {
-            // พัก 0.1 วินาที เพื่อให้ OS ทำงานทัน
-            usleep(100000);
+        // --- LOGIC ตัดสินใจ ---
 
-            // สั่งล้าง Cache อีกรอบ เพื่อความชัวร์
-            if (isset($dirs[0]))
-                clearstatcache(true, $dirs[0]);
+        // ถ้าผลลัพธ์ ไม่ตรงกับที่สั่ง (เช่น สั่งเปิด แต่ไฟล์จริงยังเขียนไม่ได้)
+        if ($final_check['is_open'] !== $should_open) {
 
-            // อ่านค่าใหม่
-            $check_info = $this->get_target_info($type);
-
-            // ถ้าค่าเปลี่ยนเป็นตามที่เราสั่งแล้ว -> หยุดรอทันที
-            if ($check_info['is_open'] === $should_open) {
-                $final_info = $check_info;
-                break;
+            // ถ้าสั่ง "เปิด" แล้วยังไม่เปิด -> แจ้งเตือนให้กดซ้ำ
+            if ($should_open) {
+                wp_send_json_error("⚠️ จังหวะของ Server ยังไม่ปลดล็อค (Busy)\n\nกรุณากดปุ่ม 'เปิด' ซ้ำอีกครั้งครับ!");
             }
-
-            // ถ้าถึงรอบสุดท้ายแล้ว ยังไม่เปลี่ยน ก็ต้องส่งค่าเท่าที่มีไป
-            if ($i === $max_retries - 1) {
-                $final_info = $check_info;
+            // ถ้าสั่ง "ปิด" แล้วยังไม่ปิด -> แจ้งเตือนเช่นกัน
+            else {
+                wp_send_json_error("⚠️ ยังปิดไม่สนิท (System Locked)\n\nกรุณากดปุ่ม 'ปิด' ซ้ำอีกครั้งครับ!");
             }
         }
-        // =========================================================
 
+        // ถ้าผ่านฉลุย ส่งค่ากลับไปเปลี่ยนสีปุ่ม
         wp_send_json_success([
-            'status' => $final_info['is_open'],
-            'new_perm' => $final_info['perm'],
+            'status' => $final_check['is_open'],
+            'new_perm' => $final_check['perm'],
             'timeout_label' => floor($this->get_timeout_seconds() / 60) . ' นาที',
-            'expire_time' => $final_info['timer_text'],
-            'btn_text' => $final_info['btn_text'],
-            'btn_class' => $final_info['btn_class'],
-            'color' => $final_info['color'],
-            'bg' => $final_info['bg']
+            'expire_time' => $final_check['timer_text'],
+            'btn_text' => $final_check['btn_text'],
+            'btn_class' => $final_check['btn_class'],
+            'color' => $final_check['color'],
+            'bg' => $final_check['bg']
         ]);
     }
 
@@ -875,7 +859,7 @@ class WP_File_Write_Control
                                     (Whitelist)</label><textarea name="wfwc_allowed_ips" class="wfwc-form-control" rows="3"
                                     placeholder="192.168.1.1"><?= esc_textarea($settings['allowed_ips']) ?></textarea></div>
                         </div>
-                        <button type="submit" class="wfwc-btn wfwc-btn-primary" style="width:auto; padding: 12px 30px;">💾
+                        <button type="submit" class="wfwc-btn wfwc-btn-open" style="width:auto; padding: 12px 30px;">💾
                             บันทึกการตั้งค่า</button>
                     </form>
                 </div>
@@ -1325,55 +1309,26 @@ class WP_File_Write_Control
     }
 
     /* =========================================
-     * [CORE] Helper: Change Permission (Turbo Mode)
-     * พยายามใช้ Command Line เพื่อความเร็วสูงสุด
+     * [CORE] Helper: Change Permission (Standard & Clean)
+     * เน้นความเรียบง่าย: สั่งเปลี่ยน Root -> ลูก -> Root
+     * ตัดคำสั่ง System แปลกๆ ออก เพื่อลดความเสี่ยง Server ค้าง
      * ========================================= */
     private function chmod_dirs($dirs, $mode)
     {
         if (empty($dirs) || !is_array($dirs))
             return;
 
-        // คำนวณเลขสิทธิ์สำหรับ Command Line (String)
-        $dir_mode_oct = sprintf('%o', $mode);           // "775" หรือ "555"
-        $file_mode_oct = ($mode === 0555) ? '444' : '644'; // "444" หรือ "644"
-
-        // คำนวณเลขสิทธิ์สำหรับ PHP (Integer)
         $target_file_mode = ($mode === 0555) ? 0444 : 0644;
 
         foreach ($dirs as $dir) {
             if (!is_dir($dir))
                 continue;
+            @set_time_limit(0); // ขอเวลาเพิ่มหน่อย
 
-            // ---------------------------------------------------------
-            // วิธีที่ 1: เร็วที่สุด (Turbo) - ใช้คำสั่ง Linux 'find' & 'chmod'
-            // ---------------------------------------------------------
-            // เช็คว่า Server อนุญาตให้ใช้ exec() หรือไม่
-            if (function_exists('exec') && !in_array('exec', array_map('trim', explode(',', ini_get('disable_functions'))))) {
+            // 1. เปิดหัว: สั่งเปลี่ยน Folder แม่ก่อน (เพื่อให้เข้าถึงลูกได้)
+            @chmod($dir, $mode);
 
-                // 1. เปลี่ยนสิทธิ์ Folder ทั้งหมดในรวดเดียว
-                // คำสั่ง: find /path -type d -exec chmod 775 {} +
-                $cmd_dir = "find " . escapeshellarg($dir) . " -type d -exec chmod $dir_mode_oct {} + 2>&1";
-                @exec($cmd_dir);
-
-                // 2. เปลี่ยนสิทธิ์ File ทั้งหมดในรวดเดียว
-                // คำสั่ง: find /path -type f -exec chmod 644 {} +
-                $cmd_file = "find " . escapeshellarg($dir) . " -type f -exec chmod $file_mode_oct {} + 2>&1";
-                @exec($cmd_file);
-
-                // ล้าง Cache และข้ามไปโฟลเดอร์ถัดไปทันที (ไม่ต้องทำ Loop PHP)
-                clearstatcache(true, $dir);
-                continue;
-            }
-
-            // ---------------------------------------------------------
-            // วิธีที่ 2: ช้าแต่ชัวร์ (Fallback) - ใช้ PHP Loop ทีละไฟล์
-            // (กรณีโฮสต์ปิด exec หรือเป็น Windows)
-            // ---------------------------------------------------------
-            @set_time_limit(300); // ขอเวลาเพิ่มเป็น 5 นาที
-
-            // เปลี่ยนโฟลเดอร์แม่
-            $this->smart_chmod($dir, $mode);
-
+            // 2. ไส้กลาง: วนลูปเปลี่ยนไฟล์ลูก (Recursive)
             try {
                 $iterator = new RecursiveIteratorIterator(
                     new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
@@ -1381,19 +1336,21 @@ class WP_File_Write_Control
                 );
 
                 foreach ($iterator as $item) {
-                    // หยุดถ้าระบบใช้เวลานานเกินไป (ป้องกัน Error 504)
-                    // แต่เราใส่ set_time_limit ไว้ช่วยแล้ว
-
-                    if ($item->isDir()) {
-                        $this->smart_chmod($item->getPathname(), $mode);
-                    } elseif ($item->isFile()) {
-                        $this->smart_chmod($item->getPathname(), $target_file_mode);
+                    try {
+                        if ($item->isDir()) {
+                            @chmod($item->getPathname(), $mode);
+                        } elseif ($item->isFile()) {
+                            @chmod($item->getPathname(), $target_file_mode);
+                        }
+                    } catch (Exception $e) {
+                        continue;
                     }
                 }
             } catch (Exception $e) {
-                continue;
             }
 
+            // 3. ปิดท้าย: สั่งย้ำ Folder แม่อีกครั้ง (สำคัญมาก! แก้กันหลุด)
+            @chmod($dir, $mode);
             clearstatcache(true, $dir);
         }
     }
@@ -1453,18 +1410,38 @@ class WP_File_Write_Control
 
         ?>
         <script type="text/html" id="tmpl-wfwc-modal-bar">
-                                                                                            <div id="wfwc-modal-bar" class="wfwc-modal-bar" style="background:<?php echo $bg; ?>; transition:0.3s;">
-                                                                                                <span>Upload Security: <strong id="wfwc-modal-status"><?php echo $txt; ?></strong></span>
-                                                                                                <button class="button wfwc-ajax-toggle <?php echo $btn_cls; ?>" data-type="upload"><?php echo $btn; ?></button>
-                                                                                            </div>
-                                                                                        </script>
+                                                                                                                                                    <div id="wfwc-modal-bar" class="wfwc-modal-bar" style="background:<?php echo $bg; ?>; transition:0.3s;">
+                                                                                                                                                        <span>Upload Security: <strong id="wfwc-modal-status"><?php echo $txt; ?></strong></span>
+                                                                                                                                                        <button class="button wfwc-ajax-toggle <?php echo $btn_cls; ?>" data-type="upload"><?php echo $btn; ?></button>
+                                                                                                                                                    </div>
+                                                                                                                                                </script>
         <?php
     }
 
+    // public function add_meta_boxes()
+    // {
+    //     foreach (['post', 'page'] as $s)
+    //         add_meta_box('wfwc_upload_control', 'File Write Control', [$this, 'render_meta_box'], $s, 'side', 'high');
+    // }
+
     public function add_meta_boxes()
     {
-        foreach (['post', 'page'] as $s)
+        // 1. เริ่มต้นด้วย post และ page
+        $screens = ['post', 'page'];
+
+        // 2. ค้นหา Post Type ทั้งหมดที่ลงท้ายด้วย _gallery
+        $args = ['public' => true];
+        $all_types = get_post_types($args, 'names');
+        foreach ($all_types as $pt) {
+            if (substr($pt, -8) === '_gallery') {
+                $screens[] = $pt;
+            }
+        }
+
+        // 3. สร้างกล่อง Meta Box
+        foreach (array_unique($screens) as $s) {
             add_meta_box('wfwc_upload_control', 'File Write Control', [$this, 'render_meta_box'], $s, 'side', 'high');
+        }
     }
 
     public function render_meta_box($post)
@@ -1477,7 +1454,7 @@ class WP_File_Write_Control
             return;
         }
 
-        echo "<div id='wfwc-mb-box' style='background:{$info['bg']}; border: 2px solid {$info['color']}; padding:12px; text-align:center; border-radius:4px;'>
+        echo "<div id='wfwc-mb-box' style='margin-top:15px; background:{$info['bg']}; border: 2px solid {$info['color']}; padding:12px; text-align:center; border-radius:4px;'>
             <div style='font-size:13px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;'>
                 <strong>📤 Upload:</strong> 
                 <span id='wfwc-mb-status' style='font-weight:bold; color:{$info['color']};'>
