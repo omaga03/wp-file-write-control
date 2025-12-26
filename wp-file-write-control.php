@@ -1,8 +1,8 @@
 <?php
 /*
 Plugin Name: WP File Write Control (Security Dashboard)
-Description: ระบบความปลอดภัยไฟล์ + API Secure + AJAX (Deep Mode (Folder+File) for Uploads Only )
-Version: 7.0.7
+Description: ระบบความปลอดภัยไฟล์ + API Secure + AJAX (Toggle Switch Fix UI)
+Version: 7.0.9
 Author: IT Admin+RDI Omaga
 */
 
@@ -86,8 +86,7 @@ class WP_File_Write_Control
                         padding: 0 20px;
                     }
 
-                    /* --- COLOR UTILITIES (บังคับสีปุ่ม) --- */
-                    /* ปุ่มเปิด (สีน้ำเงิน) */
+                    /* --- COLOR UTILITIES --- */
                     .wfwc-btn-open {
                         background-color: #4f46e5 !important;
                         color: white !important;
@@ -98,7 +97,6 @@ class WP_File_Write_Control
                         background-color: #4338ca !important;
                     }
 
-                    /* ปุ่มปิด (สีแดง) */
                     .wfwc-btn-close {
                         background-color: #dc2626 !important;
                         color: white !important;
@@ -109,62 +107,80 @@ class WP_File_Write_Control
                         background-color: #b91c1c !important;
                     }
 
-                    /* [New Style] Deep Checkbox Style */
-                    .wfwc-deep-wrapper {
-                        margin-bottom: 10px;
-                        text-align: left;
-                        padding: 5px 0;
-                    }
-
-                    .wfwc-deep-label {
-                        display: inline-flex;
+                    /* --- [NEW FIXED] Toggle Switch Style --- */
+                    .wfwc-switch-container {
+                        display: flex;
                         align-items: center;
-                        gap: 6px;
-                        font-size: 13px;
+                        gap: 10px;
+                        margin-bottom: 15px;
                         cursor: pointer;
-                        color: #555;
-                        font-weight: 600;
                         user-select: none;
-                        transition: color 0.2s;
+                        position: relative; /* เพื่อให้จัดการ input ได้ง่าย */
                     }
 
-                    .wfwc-deep-label:hover {
-                        color: #d97706;
+                    /* [แก้ไข] ซ่อน Input แบบเด็ดขาด (ใช้ opacity แทน display:none เพื่อกันปัญหาบางธีม) */
+                    .wfwc-switch-input {
+                        position: absolute !important;
+                        opacity: 0 !important;
+                        width: 0 !important;
+                        height: 0 !important;
+                        margin: 0 !important;
+                        pointer-events: none;
+                    }
+
+                    /* ตัวรางสวิตช์ */
+                    .wfwc-switch-track {
+                        position: relative;
+                        width: 44px;
+                        height: 24px;
+                        background-color: #e2e8f0; /* สีเทาตอนปิด */
+                        border-radius: 20px;
+                        transition: all 0.3s ease;
+                        border: 1px solid #cbd5e1;
+                        box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+                    }
+
+                    /* ปุ่มกลมๆ */
+                    .wfwc-switch-knob {
+                        position: absolute;
+                        top: 2px;
+                        left: 2px;
+                        width: 18px;
+                        height: 18px;
+                        background-color: white;
+                        border-radius: 50%;
+                        transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                    }
+
+                    /* สถานะ: เปิด (Checked) */
+                    .wfwc-switch-input:checked + .wfwc-switch-track {
+                        background-color: #f59e0b; /* สีส้ม Deep Mode */
+                        border-color: #d97706;
+                    }
+
+                    .wfwc-switch-input:checked + .wfwc-switch-track .wfwc-switch-knob {
+                        transform: translateX(20px);
+                    }
+
+                    /* สถานะ: Disabled (ตอนล็อค) */
+                    .wfwc-switch-input:disabled + .wfwc-switch-track {
+                        opacity: 0.6;
+                        cursor: not-allowed;
+                        filter: grayscale(0.5);
                     }
             
-                    /* เปลี่ยนสีข้อความเมื่อ Checkbox ถูกติ๊ก */
-                    .wfwc-deep-label input:checked + span {
+                    /* ข้อความข้างๆ */
+                    .wfwc-switch-label {
+                        font-size: 13px;
+                        font-weight: 600;
+                        color: #475569;
+                    }
+            
+                    .wfwc-switch-container:hover .wfwc-switch-label {
                         color: #d97706;
                     }
 
-                    /* สถานะ Disabled (ตอนเปิดสิทธิ์แล้ว) */
-                    .wfwc-deep-label input:disabled {
-                        cursor: not-allowed;
-                        opacity: 0.6;
-                    }
-                    .wfwc-deep-label input:disabled + span {
-                        opacity: 0.7;
-                    }
-
-                    .wfwc-tag {
-                        font-size: 10px;
-                        padding: 2px 6px;
-                        border-radius: 4px;
-                        margin-left: 5px;
-                        font-weight: bold;
-                    }
-
-                    .tag-turbo {
-                        background: #dcfce7;
-                        color: #166534;
-                    }
-
-                    .tag-deep {
-                        background: #ffedd5;
-                        color: #9a3412;
-                    }
-
-                    /* ปรับแต่งปุ่มในแถบแจ้งเตือน (Notice) และ Meta Box */
                     .wfwc-ajax-toggle {
                         transition: 0.3s;
                         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -189,27 +205,28 @@ class WP_File_Write_Control
                         background: #dc2626;
                     }
 
-                    /* Card Styles */
+                    /* [Card Layout Fix] ให้ปุ่มเท่ากัน */
                     .wfwc-cards {
                         display: grid;
                         grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
                         gap: 20px;
                         margin-bottom: 40px;
+                        align-items: stretch; /* [สำคัญ] บังคับให้การ์ดสูงเท่ากัน */
                     }
 
                     .wfwc-card {
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            position: relative;
-            transition: all 0.3s ease;
-
-            /* [เพิ่มส่วนนี้เข้ามา] จัด Layout ให้เนื้อหายืดหยุ่น */
-            display: flex;
-            flex-direction: column;
-            height: 100%; /* บังคับให้สูงเต็มพื้นที่ Grid */
-        }
+                        border-radius: 12px;
+                        padding: 20px;
+                        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+                        border: 1px solid rgba(0, 0, 0, 0.1);
+                        position: relative;
+                        transition: all 0.3s ease;
+                
+                        /* [สำคัญ] ใช้ Flexbox จัดเรียงแนวตั้ง */
+                        display: flex;
+                        flex-direction: column;
+                        height: 100%; 
+                    }
 
                     .wfwc-card.active {
                         background: #dcfce7 !important;
@@ -250,24 +267,22 @@ class WP_File_Write_Control
                         text-align: center;
                     }
 
-                    /* Main Button Layout */
+                    /* [Button Fix] ดันปุ่มลงล่างสุด */
                     .wfwc-btn {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-            display: block;
-            text-align: center;
-            font-size: 14px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            text-decoration: none;
-
-            /* [เพิ่มบรรทัดนี้] สั่งให้ปุ่มดันตัวเองไปอยู่ล่างสุดของการ์ดเสมอ */
-            margin-top: auto; 
-        }
+                        width: 100%;
+                        padding: 12px;
+                        border: none;
+                        border-radius: 8px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: 0.2s;
+                        display: block;
+                        text-align: center;
+                        font-size: 14px;
+                        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                        text-decoration: none;
+                        margin-top: auto; /* [สำคัญ] คำสั่งนี้จะดันปุ่มไปติดขอบล่าง */
+                    }
 
                     /* Other Styles */
                     .wfwc-settings-box {
@@ -450,7 +465,6 @@ class WP_File_Write_Control
                         border-left-width: 5px !important;
                     }
 
-                    /* [CSS แก้ไข] Animation และจัดระเบียบปุ่ม */
                     @keyframes wfwc-spin {
                         0% {
                             transform: rotate(0deg);
@@ -465,27 +479,21 @@ class WP_File_Write_Control
                         display: inline-block;
                         animation: wfwc-spin 1s linear infinite;
                         margin-right: 8px;
-                        /* เว้นระยะห่างจากข้อความ */
                         font-size: 20px;
                         width: 20px;
                         height: 20px;
                     }
 
-                    /* Class ที่จะถูกเติมเมื่อกดปุ่ม */
                     .wfwc-btn-saving {
                         opacity: 0.8 !important;
                         cursor: wait !important;
                         pointer-events: none;
                         position: relative;
-
-                        /* [สำคัญ] จัด Layout ให้เป็นแนวนอนและห้ามตัดคำ */
                         display: inline-flex !important;
                         align-items: center !important;
                         justify-content: center !important;
                         white-space: nowrap !important;
-                        /* ห้ามข้อความตกลงมาเด็ดขาด */
                         min-width: 160px;
-                        /* กำหนดความกว้างขั้นต่ำกันปุ่มหด */
                     }
                 </style>
                 <script>
@@ -516,7 +524,7 @@ class WP_File_Write_Control
                             btn.addClass('wfwc-btn-saving');
                         });
 
-                        // 2. Button Action Logic (Modified for Checkbox)
+                        // 2. Button Action Logic (Modified for Checkbox/Switch)
                         $(document).on('click', '.wfwc-ajax-toggle', function (e) {
                             e.preventDefault();
                             var btn = $(this);
@@ -831,14 +839,17 @@ class WP_File_Write_Control
                             <h3 class="wfwc-card-title"><?= $info['label'] ?></h3>
 
                             <?php if ($type === 'upload'): ?>
-                                <div class="wfwc-deep-wrapper">
-                                    <label class="wfwc-deep-label" title="Apply to sub-folders and files">
-                                        <input type="checkbox" name="wfwc_deep_check_<?= $type ?>" value="1" 
-                                            <?php checked($is_deep_active, true); ?> 
-                                            <?= $disabled_attr ?>>
-                                        <span>🐢 Folder+File</span>
-                                    </label>
-                                </div>
+                                <label class="wfwc-switch-container" title="Apply to sub-folders and files">
+                                    <input type="checkbox" class="wfwc-switch-input" name="wfwc_deep_check_<?= $type ?>" value="1" 
+                                        <?php checked($is_deep_active, true); ?> 
+                                        <?= $disabled_attr ?>>
+                    
+                                    <div class="wfwc-switch-track">
+                                        <div class="wfwc-switch-knob"></div>
+                                    </div>
+                    
+                                    <span class="wfwc-switch-label">🐢 Deep Mode</span>
+                                </label>
                             <?php endif; ?>
 
                             <button class="wfwc-btn wfwc-ajax-toggle <?= $info['btn_class'] ?>" data-type="<?= $type ?>">
@@ -1571,7 +1582,7 @@ class WP_File_Write_Control
                         if ($item->isDir()) {
                             @chmod($item->getPathname(), $mode);
                         } elseif ($item->isFile()) {
-                            // [Condition] ทำงานเฉพาะ Deep Mode Folder+File
+                            // [Condition] ทำงานเฉพาะ Deep Mode
                             if ($is_deep_mode) {
                                 @chmod($item->getPathname(), $target_file_mode);
                             }
@@ -1621,16 +1632,17 @@ class WP_File_Write_Control
                         <code style='background:#fff; padding:2px 6px; border-radius:4px; border:1px solid #ddd; margin-left:8px; font-size:11px;'>{$info['perm']}</code>
                     </div>
 
-                    <div style='display:flex; align-items:center; gap:10px;'>
+                    <div style='display:flex; align-items:center; gap:15px;'>
                         " . ($t === 'upload' ? "
-                        <div class='wfwc-deep-wrapper' style='margin:0;'>
-                            <label class='wfwc-deep-label'>
-                                <input type='checkbox' name='wfwc_deep_check_{$t}' value='1' 
-                                    " . checked($is_deep_active, true, false) . " 
-                                    $disabled_attr>
-                                <span>🐢 Folder+File</span>
-                            </label>
-                        </div>" : "") . "
+                        <label class='wfwc-switch-container' style='margin-bottom:0;'>
+                            <input type='checkbox' class='wfwc-switch-input' name='wfwc_deep_check_{$t}' value='1' 
+                                " . checked($is_deep_active, true, false) . " 
+                                $disabled_attr>
+                            <div class='wfwc-switch-track' style='width:36px; height:20px;'>
+                                <div class='wfwc-switch-knob' style='width:16px; height:16px; top:1px; left:1px;'></div>
+                            </div>
+                            <span class='wfwc-switch-label' style='font-size:12px; margin-left:5px;'>🐢 Deep</span>
+                        </label>" : "") . "
 
                         <button class='button wfwc-ajax-toggle {$info['btn_class']}' data-type='{$info['type']}'>
                             {$info['btn_text']}
@@ -1691,12 +1703,15 @@ class WP_File_Write_Control
                 </span>
             </div>";
 
-        echo "<div class='wfwc-deep-wrapper' style='text-align:center;'>
-                <label class='wfwc-deep-label'>
-                    <input type='checkbox' name='wfwc_deep_check_upload' value='1' 
+        echo "<div style='display:flex; justify-content:center; margin-bottom:10px;'>
+                <label class='wfwc-switch-container' style='margin-bottom:0;'>
+                    <input type='checkbox' class='wfwc-switch-input' name='wfwc_deep_check_upload' value='1' 
                         " . checked($is_deep_active, true, false) . " 
                         $disabled_attr>
-                    <span>🐢 Folder+File</span>
+                    <div class='wfwc-switch-track'>
+                        <div class='wfwc-switch-knob'></div>
+                    </div>
+                    <span class='wfwc-switch-label' style='margin-left:8px;'>🐢 Deep Mode</span>
                 </label>
               </div>";
 
