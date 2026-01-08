@@ -1,6 +1,6 @@
 # WP File Write Control (Security Dashboard)
 
-**Version:** 7.1.5  
+**Version:** 7.1.6  
 **Author:** IT Admin+RDI Omaga  
 **Requires at least:** WordPress 5.0  
 **Tested up to:** WordPress 6.7  
@@ -45,7 +45,7 @@
 ## Changelog
 
 ### 7.1.6
-*   **Improvement:** ปรับปรุงระบบแสดงผลการอัพเดท Plugin/Theme ให้มองเห็นจำนวนอัพเดทได้แท้ขณะล็อกอยู่
+*   **Improvement:** ปรับปรุงระบบแสดงผลการอัพเดท Plugin/Theme ให้มองเห็นจำนวนอัพเดทได้แม้ขณะล็อกอยู่
 *   **UI:** ปรับปุ่มอัพเดทให้เป็นสีเทา (Grayed out) และกดไม่ได้เมื่อระบบ Lock อยู่ เพื่อป้องกันความสับสน
 *   **Safety:** เพิ่มระบบ Safety Block แจ้งเตือนเมื่อพยายามกดอัพเดทขณะล็อกระบบ
 
