@@ -2,7 +2,7 @@
 /*
 Plugin Name: WP File Write Control (Security Dashboard)
 Description: ระบบความปลอดภัยไฟล์ + API Secure + AJAX (Beautiful Full Width Bar UI)
-Version: 7.1.4
+Version: 7.1.5
 Author: IT Admin+RDI Omaga
 */
 
@@ -509,8 +509,8 @@ class WP_File_Write_Control
             }
 
             /* =================================================================
-                                                                     * [NEW] BEAUTIFUL FULL WIDTH BAR (Media Edit)
-                                                                     * ================================================================= */
+                                                                             * [NEW] BEAUTIFUL FULL WIDTH BAR (Media Edit)
+                                                                             * ================================================================= */
             #wfwc-custom-media-bar {
                 display: flex;
                 width: 100%;
