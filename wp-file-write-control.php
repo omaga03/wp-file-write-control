@@ -1,8 +1,8 @@
 <?php
 /*
 Plugin Name: WP File Write Control (Security Dashboard)
-Description: ระบบความปลอดภัยไฟล์ + API Secure + AJAX (Toggle Switch Fix UI)
-Version: 7.0.9
+Description: ระบบความปลอดภัยไฟล์ + API Secure + AJAX (Beautiful Full Width Bar UI)
+Version: 7.1.4
 Author: IT Admin+RDI Omaga
 */
 
@@ -70,576 +70,688 @@ class WP_File_Write_Control
             ]) . ";
         </script>";
         ?>
-                <style>
-                    * {
-                        box-sizing: border-box;
-                    }
-
-                    .wfwc-wrapper {
-                        background: #f8f9fa;
-                        padding: 20px 0;
-                    }
-
-                    .wfwc-container {
-                        max-width: 1200px;
-                        margin: 0 auto;
-                        padding: 0 20px;
-                    }
-
-                    /* --- COLOR UTILITIES --- */
-                    .wfwc-btn-open {
-                        background-color: #4f46e5 !important;
-                        color: white !important;
-                        border: 1px solid #4f46e5 !important;
-                    }
-
-                    .wfwc-btn-open:hover {
-                        background-color: #4338ca !important;
-                    }
-
-                    .wfwc-btn-close {
-                        background-color: #dc2626 !important;
-                        color: white !important;
-                        border: 1px solid #dc2626 !important;
-                    }
-
-                    .wfwc-btn-close:hover {
-                        background-color: #b91c1c !important;
-                    }
-
-                    /* --- [NEW FIXED] Toggle Switch Style --- */
-                    .wfwc-switch-container {
-                        display: flex;
-                        align-items: center;
-                        gap: 10px;
-                        margin-bottom: 15px;
-                        cursor: pointer;
-                        user-select: none;
-                        position: relative; /* เพื่อให้จัดการ input ได้ง่าย */
-                    }
-
-                    /* [แก้ไข] ซ่อน Input แบบเด็ดขาด (ใช้ opacity แทน display:none เพื่อกันปัญหาบางธีม) */
-                    .wfwc-switch-input {
-                        position: absolute !important;
-                        opacity: 0 !important;
-                        width: 0 !important;
-                        height: 0 !important;
-                        margin: 0 !important;
-                        pointer-events: none;
-                    }
-
-                    /* ตัวรางสวิตช์ */
-                    .wfwc-switch-track {
-                        position: relative;
-                        width: 44px;
-                        height: 24px;
-                        background-color: #e2e8f0; /* สีเทาตอนปิด */
-                        border-radius: 20px;
-                        transition: all 0.3s ease;
-                        border: 1px solid #cbd5e1;
-                        box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
-                    }
-
-                    /* ปุ่มกลมๆ */
-                    .wfwc-switch-knob {
-                        position: absolute;
-                        top: 2px;
-                        left: 2px;
-                        width: 18px;
-                        height: 18px;
-                        background-color: white;
-                        border-radius: 50%;
-                        transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-                    }
-
-                    /* สถานะ: เปิด (Checked) */
-                    .wfwc-switch-input:checked + .wfwc-switch-track {
-                        background-color: #f59e0b; /* สีส้ม Deep Mode */
-                        border-color: #d97706;
-                    }
-
-                    .wfwc-switch-input:checked + .wfwc-switch-track .wfwc-switch-knob {
-                        transform: translateX(20px);
-                    }
-
-                    /* สถานะ: Disabled (ตอนล็อค) */
-                    .wfwc-switch-input:disabled + .wfwc-switch-track {
-                        opacity: 0.6;
-                        cursor: not-allowed;
-                        filter: grayscale(0.5);
-                    }
-            
-                    /* ข้อความข้างๆ */
-                    .wfwc-switch-label {
-                        font-size: 13px;
-                        font-weight: 600;
-                        color: #475569;
-                    }
-            
-                    .wfwc-switch-container:hover .wfwc-switch-label {
-                        color: #d97706;
-                    }
-
-                    .wfwc-ajax-toggle {
-                        transition: 0.3s;
-                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-                    }
-
-                    /* Status Pills */
-                    .wfwc-status-pill {
-                        padding: 4px 12px;
-                        border-radius: 20px;
-                        font-size: 13px;
-                        font-weight: bold;
-                        color: white;
-                        display: inline-block;
-                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-                    }
-
-                    .wfwc-status-pill.status-open {
-                        background: #16a34a;
-                    }
-
-                    .wfwc-status-pill.status-closed {
-                        background: #dc2626;
-                    }
-
-                    /* [Card Layout Fix] ให้ปุ่มเท่ากัน */
-                    .wfwc-cards {
-                        display: grid;
-                        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-                        gap: 20px;
-                        margin-bottom: 40px;
-                        align-items: stretch; /* [สำคัญ] บังคับให้การ์ดสูงเท่ากัน */
-                    }
-
-                    .wfwc-card {
-                        border-radius: 12px;
-                        padding: 20px;
-                        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-                        border: 1px solid rgba(0, 0, 0, 0.1);
-                        position: relative;
-                        transition: all 0.3s ease;
-                
-                        /* [สำคัญ] ใช้ Flexbox จัดเรียงแนวตั้ง */
-                        display: flex;
-                        flex-direction: column;
-                        height: 100%; 
-                    }
-
-                    .wfwc-card.active {
-                        background: #dcfce7 !important;
-                        border-color: #86efac;
-                    }
-
-                    .wfwc-card.inactive {
-                        background: #fee2e2 !important;
-                        border-color: #fca5a5;
-                    }
-
-                    .wfwc-card-top {
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: start;
-                        margin-bottom: 15px;
-                    }
-
-                    .wfwc-card-icon {
-                        font-size: 36px;
-                    }
-
-                    .wfwc-card-title {
-                        font-size: 16px;
-                        font-weight: 600;
-                        margin: 0 0 15px 0;
-                        color: #333;
-                    }
-
-                    .wfwc-timer {
-                        font-size: 12px;
-                        color: #b91c1c;
-                        padding: 8px;
-                        background: rgba(255, 255, 255, 0.6);
-                        border-radius: 6px;
-                        font-weight: 600;
-                        margin-top: 10px;
-                        text-align: center;
-                    }
-
-                    /* [Button Fix] ดันปุ่มลงล่างสุด */
-                    .wfwc-btn {
-                        width: 100%;
-                        padding: 12px;
-                        border: none;
-                        border-radius: 8px;
-                        font-weight: 600;
-                        cursor: pointer;
-                        transition: 0.2s;
-                        display: block;
-                        text-align: center;
-                        font-size: 14px;
-                        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                        text-decoration: none;
-                        margin-top: auto; /* [สำคัญ] คำสั่งนี้จะดันปุ่มไปติดขอบล่าง */
-                    }
-
-                    /* Other Styles */
-                    .wfwc-settings-box {
-                        background: white;
-                        padding: 30px;
-                        border-radius: 12px;
-                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-                        border: 1px solid #e5e7eb;
-                    }
-
-                    .wfwc-section-title {
-                        font-size: 18px;
-                        font-weight: 600;
-                        margin: 40px 0 25px 0;
-                        border-bottom: 2px solid #e8e8e8;
-                        padding-bottom: 15px;
-                    }
-
-                    .wfwc-form-group {
-                        margin-bottom: 25px;
-                    }
-
-                    .wfwc-form-header {
-                        display: flex;
-                        align-items: center;
-                        gap: 10px;
-                        margin-bottom: 8px;
-                    }
-
-                    .wfwc-form-control {
-                        width: 100%;
-                        padding: 10px;
-                        border: 1px solid #d1d5db;
-                        border-radius: 6px;
-                    }
-
-                    .wfwc-switch {
-                        position: relative;
-                        display: inline-block;
-                        width: 36px;
-                        height: 20px;
-                    }
-
-                    .wfwc-switch input {
-                        opacity: 0;
-                        width: 0;
-                        height: 0;
-                    }
-
-                    .slider {
-                        position: absolute;
-                        cursor: pointer;
-                        top: 0;
-                        left: 0;
-                        right: 0;
-                        bottom: 0;
-                        background-color: #ccc;
-                        transition: .4s;
-                        border-radius: 20px;
-                    }
-
-                    .slider:before {
-                        position: absolute;
-                        content: "";
-                        height: 14px;
-                        width: 14px;
-                        left: 3px;
-                        bottom: 3px;
-                        background-color: white;
-                        transition: .4s;
-                        border-radius: 50%;
-                    }
-
-                    input:checked+.slider {
-                        background-color: #2196F3;
-                    }
-
-                    input:checked+.slider:before {
-                        transform: translateX(16px);
-                    }
-
-                    .wfwc-table-container {
-                        background: white;
-                        border-radius: 12px;
-                        overflow: hidden;
-                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-                        border: 1px solid #e8e8e8;
-                    }
-
-                    .wfwc-table {
-                        width: 100%;
-                        border-collapse: collapse;
-                    }
-
-                    .wfwc-table th {
-                        background: #f3f4f6;
-                        padding: 12px;
-                        text-align: left;
-                        font-size: 12px;
-                        color: #4b5563;
-                    }
-
-                    .wfwc-table td {
-                        padding: 12px;
-                        border-bottom: 1px solid #f3f4f6;
-                        font-size: 13px;
-                    }
-
-                    .wfwc-header {
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                        color: white;
-                        padding: 30px;
-                        border-radius: 12px;
-                        margin-bottom: 30px;
-                        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
-                    }
-
-                    .wfwc-header h1 {
-                        margin: 0 0 5px 0;
-                        font-size: 28px;
-                        color: white;
-                    }
-
-                    .wfwc-email-alert {
-                        background: rgba(255, 255, 255, 0.15);
-                        display: inline-flex;
-                        align-items: center;
-                        gap: 8px;
-                        padding: 6px 12px;
-                        border-radius: 6px;
-                        margin-top: 15px;
-                        font-size: 13px;
-                        color: #fff;
-                    }
-
-                    .dashboard-widget-notice .wfwc-cards {
-                        grid-template-columns: 1fr 1fr 1fr !important;
-                        gap: 5px;
-                        margin-bottom: 10px;
-                    }
-
-                    .dashboard-widget-notice .wfwc-card {
-                        padding: 10px;
-                    }
-
-                    .dashboard-widget-notice .wfwc-btn {
-                        padding: 5px;
-                        font-size: 11px;
-                    }
-
-                    .wfwc-modal-bar {
-                        padding: 0 20px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: space-between;
-                        position: absolute;
-                        top: 0;
-                        left: 0;
-                        right: 0;
-                        height: 50px;
-                        z-index: 9999;
-                        box-sizing: border-box;
-                        border-bottom: 1px solid #ddd;
-                    }
-
-                    .media-modal-content.has-wfwc-bar .media-frame-title {
-                        top: 50px !important;
-                    }
-
-                    .media-modal-content.has-wfwc-bar .media-frame-router {
-                        top: 100px !important;
-                    }
-
-                    .media-modal-content.has-wfwc-bar .media-frame-content {
-                        top: 134px !important;
-                    }
-
-                    #wfwc-notice-bar {
-                        transition: 0.3s;
-                        border-left-width: 5px !important;
-                    }
-
-                    @keyframes wfwc-spin {
-                        0% {
-                            transform: rotate(0deg);
-                        }
-
-                        100% {
-                            transform: rotate(360deg);
-                        }
-                    }
-
-                    .wfwc-loading-icon {
-                        display: inline-block;
-                        animation: wfwc-spin 1s linear infinite;
-                        margin-right: 8px;
-                        font-size: 20px;
-                        width: 20px;
-                        height: 20px;
-                    }
-
-                    .wfwc-btn-saving {
-                        opacity: 0.8 !important;
-                        cursor: wait !important;
-                        pointer-events: none;
-                        position: relative;
-                        display: inline-flex !important;
-                        align-items: center !important;
-                        justify-content: center !important;
-                        white-space: nowrap !important;
-                        min-width: 160px;
-                    }
-                </style>
-                <script>
-                    jQuery(document).ready(function ($) {
-
-                        // [1] ย้ายการ์ดเปิด-ปิดไปไว้ในช่อง Featured Image ทันทีที่โหลดหน้า
-                        if ($('#postimagediv').length > 0) {
-                            // ดึงเนื้อหาจากการ์ด Meta Box เดิมไปใส่ไว้บนสุดของช่อง Featured Image
-                            $('#wfwc_upload_control .inside').contents().appendTo('#postimagediv .inside');
-                            $('#postimagediv .inside #wfwc-mb-box').css({ 'margin-bottom': '15px', 'display': 'block' });
-                            // ซ่อนกล่อง Meta Box เดิมที่ว่างแล้ว
-                            $('#wfwc_upload_control').hide();
-                        }
-
-                        // [JS แก้ไข] Effect ปุ่มบันทึก (แก้ปัญหาปุ่มบีบ)
-                        $('.wfwc-settings-box form').on('submit', function () {
-                            var btn = $(this).find('button[type="submit"]');
-
-                            // 1. จำความกว้างเดิมไว้เป็น "ขั้นต่ำ" (กันปุ่มหด แต่ยอมให้ขยายได้)
-                            var originalWidth = btn.outerWidth();
-                            btn.css('min-width', originalWidth);
-
-                            // 2. เปลี่ยนข้อความและไอคอน (จัด HTML ให้สวยงาม)
-                            // ใช้ <span> ห่อข้อความเพื่อให้จัดตำแหน่งง่าย
-                            btn.html('<span class="dashicons dashicons-update wfwc-loading-icon"></span> <span>กำลังบันทึก...</span>');
-
-                            // 3. ใส่ Class
-                            btn.addClass('wfwc-btn-saving');
-                        });
-
-                        // 2. Button Action Logic (Modified for Checkbox/Switch)
-                        $(document).on('click', '.wfwc-ajax-toggle', function (e) {
-                            e.preventDefault();
-                            var btn = $(this);
-                            var type = btn.attr('data-type') || 'upload'; // เช่น upload, plugin, theme
-
-                            // [CHANGE] Checkbox logic instead of Radio
-                            var checkbox = $('input[name="wfwc_deep_check_' + type + '"]');
-                            // ถ้าติ๊ก = Deep (all_recursive), ไม่ติ๊ก = Turbo (dir_only)
-                            var selectedMode = checkbox.is(':checked') ? 'all_recursive' : 'dir_only';
-
-                            var originalText = btn.text();
-                            var allBtns = $(`.wfwc-ajax-toggle[data-type="${type}"]`);
-
-                            allBtns.prop('disabled', true).css('opacity', 0.5).text('Working...');
-
-                            $.post(ajaxurl, {
-                                action: 'wfwc_toggle_upload',
-                                wfwc_security: '<?php echo wp_create_nonce(self::NONCE_ACTION); ?>',
-                                type: type,
-                                mode: selectedMode // ส่งค่า Mode ของใครของมันไป
-                            }, function (res) {
-                                if (res.success) {
-                                    var status = res.data.status;
-                                    var timeoutLabel = res.data.timeout_label;
-                                    var expireTime = res.data.expire_time;
-                                    var newPerm = res.data.new_perm;
-
-                                    // ตรวจสอบว่าปัจจุบันอยู่หน้าเขียนโพสต์หรือไม่
-                                    var pathName = window.location.pathname;
-                                    var isPostPage = pathName.indexOf('post-new.php') !== -1 || pathName.indexOf('post.php') !== -1;
-
-                                    if (isPostPage) {
-                                        // เฉพาะหน้าเขียนโพสต์: อัปเดตตัวเลขและสีทันที (ไม่เปลี่ยนหน้า)
-                                        updateAllUploadUI(status, timeoutLabel, expireTime, newPerm);
-                                        allBtns.prop('disabled', false).css('opacity', 1);
-
-                                        // [JS] Disable/Enable checkbox based on new status
-                                        // ถ้าสถานะใหม่คือ Opened (status=true) -> Disable Checkbox
-                                        // ถ้าสถานะใหม่คือ Closed (status=false) -> Enable Checkbox
-                                        var targetCheck = $('input[name="wfwc_deep_check_' + type + '"]');
-                                        targetCheck.prop('disabled', status);
-                                        if (!status) {
-                                            // ถ้าปิดแล้ว ให้ Reset เป็น Unchecked (Default Turbo) ตามต้องการ
-                                            targetCheck.prop('checked', false);
-                                        }
-
-                                    } else {
-                                        // หน้าอื่นๆ ทั้งหมด: บังคับรีโหลดหน้าใหม่เพื่อให้ข้อมูลเป็นปัจจุบัน
-                                        location.reload();
-                                    }
-                                } else {
-                                    alert('Error: ' + (res.data || 'Unknown'));
-                                    allBtns.prop('disabled', false).css('opacity', 1).text(originalText);
-                                }
-                            }).fail(function () {
-                                alert('Request Failed. Please try again.');
-                                allBtns.prop('disabled', false).css('opacity', 1).text(originalText);
-                            });
-                        });
-
-                        // ฟังก์ชันอัปเดตหน้าจอสำหรับหน้าเขียนโพสต์
-                        function updateAllUploadUI(status, timeoutLabel, expireTime, newPerm) {
-                            var bg = status ? '#dcfce7' : '#fee2e2';
-                            var border = status ? '#16a34a' : '#dc2626';
-                            var color = status ? '#16a34a' : '#dc2626';
-
-                            // อัปเดตข้อความใน Meta Box พร้อมเลขสิทธิ์ล่าสุด
-                            var txtStatusLong = (status ? 'เปิด (Allowed)' : 'ปิด (Locked)') + ' (' + newPerm + ')';
-                            var txtBtn = status ? '🔒 ปิดทันที' : '🔓 เปิด ' + timeoutLabel;
-
-                            $('#wfwc-mb-box').css({ 'background': bg, 'border-color': border });
-                            $('#wfwc-mb-status').text(txtStatusLong).css('color', color);
-
-                            if (status) {
-                                $('#wfwc-mb-timer').text('⏱️ ปิดอัตโนมัติ: ' + expireTime).slideDown();
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+
+            /* --- Base Styles --- */
+            .wfwc-wrapper {
+                background: #f8f9fa;
+                padding: 20px 0;
+            }
+
+            .wfwc-container {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 0 20px;
+            }
+
+            /* Buttons */
+            .wfwc-btn-open {
+                background-color: #4f46e5 !important;
+                color: white !important;
+                border: 1px solid #4f46e5 !important;
+            }
+
+            .wfwc-btn-open:hover {
+                background-color: #4338ca !important;
+                border-color: #4338ca !important;
+                transform: translateY(-1px);
+                box-shadow: 0 4px 8px rgba(79, 70, 229, 0.3) !important;
+            }
+
+            .wfwc-btn-close {
+                background-color: #dc2626 !important;
+                color: white !important;
+                border: 1px solid #dc2626 !important;
+            }
+
+            .wfwc-btn-close:hover {
+                background-color: #b91c1c !important;
+                border-color: #b91c1c !important;
+                transform: translateY(-1px);
+                box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3) !important;
+            }
+
+            /* Switch */
+            .wfwc-switch-container {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                cursor: pointer;
+                user-select: none;
+                position: relative;
+            }
+
+            .wfwc-switch-input {
+                position: absolute !important;
+                opacity: 0 !important;
+                width: 0 !important;
+                height: 0 !important;
+                margin: 0 !important;
+                pointer-events: none;
+            }
+
+            .wfwc-switch-track {
+                position: relative;
+                width: 40px;
+                height: 22px;
+                background-color: #e2e8f0;
+                border-radius: 20px;
+                transition: all 0.3s ease;
+                border: 1px solid #cbd5e1;
+                box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+            }
+
+            .wfwc-switch-knob {
+                position: absolute;
+                top: 2px;
+                left: 2px;
+                width: 16px;
+                height: 16px;
+                background-color: white;
+                border-radius: 50%;
+                transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            }
+
+            .wfwc-switch-input:checked+.wfwc-switch-track {
+                background-color: #f59e0b;
+                border-color: #d97706;
+            }
+
+            .wfwc-switch-input:checked+.wfwc-switch-track .wfwc-switch-knob {
+                transform: translateX(18px);
+            }
+
+            .wfwc-switch-input:disabled+.wfwc-switch-track {
+                opacity: 0.6;
+                cursor: not-allowed;
+                filter: grayscale(0.5);
+            }
+
+            .wfwc-switch-label {
+                font-size: 12px;
+                font-weight: 600;
+                color: #64748b;
+                margin-top: 1px;
+            }
+
+            .wfwc-switch-container:hover .wfwc-switch-label {
+                color: #d97706;
+            }
+
+            /* Cards Grid */
+            .wfwc-cards {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                /* 1 แถว 3 คอลัมน์ - ป้องกันล้น */
+                gap: 15px;
+                margin-bottom: 40px;
+                align-items: stretch;
+                width: 100%;
+                box-sizing: border-box;
+            }
+
+            .wfwc-card {
+                border-radius: 12px;
+                padding: 18px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+                border: 2px solid rgba(0, 0, 0, 0.08);
+                position: relative;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                display: flex;
+                flex-direction: column;
+                height: 100%;
+                box-sizing: border-box;
+                overflow: hidden;
+            }
+
+            .wfwc-card:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+            }
+
+            .wfwc-card.active {
+                background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%) !important;
+                border-color: #86efac !important;
+                box-shadow: 0 2px 8px rgba(34, 197, 94, 0.15);
+            }
+
+            .wfwc-card.active:hover {
+                box-shadow: 0 4px 16px rgba(34, 197, 94, 0.25);
+            }
+
+            .wfwc-card.inactive {
+                background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%) !important;
+                border-color: #fca5a5 !important;
+                box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
+            }
+
+            .wfwc-card.inactive:hover {
+                box-shadow: 0 4px 16px rgba(239, 68, 68, 0.25);
+            }
+
+            .wfwc-card-top {
+                display: flex;
+                justify-content: space-between;
+                align-items: start;
+                margin-bottom: 12px;
+            }
+
+            .wfwc-card-icon {
+                font-size: 32px;
+                width: 40px;
+                height: 40px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: rgba(255, 255, 255, 0.8);
+                border-radius: 10px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                transition: all 0.3s ease;
+            }
+
+            .wfwc-card.active .wfwc-card-icon {
+                background: rgba(255, 255, 255, 0.9);
+                box-shadow: 0 2px 6px rgba(34, 197, 94, 0.2);
+            }
+
+            .wfwc-card.inactive .wfwc-card-icon {
+                background: rgba(255, 255, 255, 0.9);
+                box-shadow: 0 2px 6px rgba(239, 68, 68, 0.2);
+            }
+
+            .wfwc-card-title {
+                font-size: 15px;
+                font-weight: 600;
+                margin: 0 0 12px 0;
+                color: #333;
+            }
+
+            .wfwc-timer {
+                font-size: 12px;
+                color: #b91c1c;
+                padding: 8px;
+                background: rgba(255, 255, 255, 0.6);
+                border-radius: 6px;
+                font-weight: 600;
+                margin-top: 10px;
+                text-align: center;
+            }
+
+            .wfwc-btn {
+                width: 100%;
+                padding: 12px;
+                border: none;
+                border-radius: 8px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                display: block;
+                text-align: center;
+                font-size: 14px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                text-decoration: none;
+                margin-top: auto;
+            }
+
+            .wfwc-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+            }
+
+            .wfwc-btn:active {
+                transform: translateY(0);
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+
+            .wfwc-status-pill {
+                padding: 4px 12px;
+                border-radius: 20px;
+                font-size: 13px;
+                font-weight: bold;
+                color: white;
+                display: inline-block;
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+                transition: all 0.3s ease;
+            }
+
+            .wfwc-status-pill.status-open {
+                background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+            }
+
+            .wfwc-status-pill.status-closed {
+                background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            }
+
+            /* Single-line control bar (post-new, page, gallery, etc.) */
+            #wfwc-mb-box {
+                display: flex;
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                padding: 12px 20px;
+                box-sizing: border-box;
+                border-radius: 12px;
+                border-left-width: 6px;
+                border-left-style: solid;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            #wfwc-mb-box:hover {
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+            }
+
+            .wfwc-info-group {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+
+            .wfwc-info-icon-wrapper {
+                background: rgba(255, 255, 255, 0.85);
+                border-radius: 10px;
+                width: 40px;
+                height: 40px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                transition: all 0.3s ease;
+            }
+
+            #wfwc-mb-box:hover .wfwc-info-icon-wrapper {
+                transform: scale(1.05);
+                box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+            }
+
+            .wfwc-action-group {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                margin-left: auto;
+            }
+
+            /* Settings & Table */
+            .wfwc-settings-box {
+                background: white;
+                padding: 30px;
+                border-radius: 12px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+                border: 1px solid #e5e7eb;
+            }
+
+            .wfwc-section-title {
+                font-size: 18px;
+                font-weight: 600;
+                margin: 40px 0 25px 0;
+                border-bottom: 2px solid #e8e8e8;
+                padding-bottom: 15px;
+            }
+
+            .wfwc-form-group {
+                margin-bottom: 25px;
+            }
+
+            .wfwc-form-header {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 8px;
+            }
+
+            .wfwc-form-control {
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #d1d5db;
+                border-radius: 6px;
+            }
+
+            .wfwc-table-container {
+                background: white;
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+                border: 1px solid #e8e8e8;
+            }
+
+            .wfwc-table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+
+            .wfwc-table th {
+                background: #f3f4f6;
+                padding: 12px;
+                text-align: left;
+                font-size: 12px;
+                color: #4b5563;
+            }
+
+            .wfwc-table td {
+                padding: 12px;
+                border-bottom: 1px solid #f3f4f6;
+                font-size: 13px;
+            }
+
+            .wfwc-header {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 30px;
+                border-radius: 12px;
+                margin-bottom: 30px;
+                box-shadow: 0 8px 20px rgba(102, 126, 234, 0.35);
+                position: relative;
+                overflow: hidden;
+            }
+
+            .wfwc-header::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 100%);
+                pointer-events: none;
+            }
+
+            .wfwc-header h1 {
+                margin: 0 0 5px 0;
+                font-size: 28px;
+                color: white;
+            }
+
+            .wfwc-email-alert {
+                background: rgba(255, 255, 255, 0.15);
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 6px 12px;
+                border-radius: 6px;
+                margin-top: 15px;
+                font-size: 13px;
+                color: #fff;
+            }
+
+            .wfwc-loading-icon {
+                display: inline-block;
+                animation: wfwc-spin 1s linear infinite;
+                margin-right: 8px;
+                font-size: 20px;
+                width: 20px;
+                height: 20px;
+            }
+
+            .wfwc-btn-saving {
+                opacity: 0.8 !important;
+                cursor: wait !important;
+                pointer-events: none;
+                position: relative;
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                white-space: nowrap !important;
+                min-width: 160px;
+            }
+
+            @keyframes wfwc-spin {
+                0% {
+                    transform: rotate(0deg);
+                }
+
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+
+            /* =================================================================
+                                                                     * [NEW] BEAUTIFUL FULL WIDTH BAR (Media Edit)
+                                                                     * ================================================================= */
+            #wfwc-custom-media-bar {
+                display: flex;
+                width: 100%;
+                flex-basis: 100%;
+                margin-bottom: 25px;
+                box-sizing: border-box;
+            }
+
+            #wfwc-custom-media-bar #wfwc-mb-box {
+                padding: 12px 24px !important;
+                margin: 0 !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+
+                border-left-width: 6px !important;
+                border-top: 1px solid #e2e8f0;
+                border-right: 1px solid #e2e8f0;
+                border-bottom: 1px solid #e2e8f0;
+                border-radius: 8px !important;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
+                background: #fff;
+            }
+
+            /* --- Left Side: Info --- */
+
+            .wfwc-info-text {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .wfwc-info-title {
+                font-size: 15px;
+                font-weight: 700;
+                line-height: 1.2;
+                color: #1e293b;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .wfwc-info-subtitle {
+                font-size: 12px;
+                color: #64748b;
+                margin-top: 2px;
+            }
+
+            /* --- Right Side: Actions --- */
+            #wfwc-custom-media-bar .wfwc-action-group {
+                display: flex !important;
+                align-items: center !important;
+                gap: 20px !important;
+                padding-left: 20px;
+                border-left: 1px solid #f1f5f9;
+                /* Divider เส้นบางๆ */
+            }
+
+            /* Timer Badge Style */
+            #wfwc-mb-timer {
+                font-size: 12px !important;
+                font-weight: 600 !important;
+                padding: 4px 10px !important;
+                border-radius: 20px !important;
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                white-space: nowrap;
+            }
+
+            #wfwc-custom-media-bar .wfwc-btn {
+                width: auto !important;
+                min-width: 140px !important;
+                margin: 0 !important;
+                padding: 9px 24px !important;
+                font-size: 14px !important;
+                font-weight: 600 !important;
+                border-radius: 6px !important;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+                transition: transform 0.1s, box-shadow 0.2s;
+            }
+
+            #wfwc-custom-media-bar .wfwc-btn:active {
+                transform: translateY(1px);
+                box-shadow: none !important;
+            }
+
+            /* ปรับปุ่ม Switch ใน Bar */
+            #wfwc-custom-media-bar .wfwc-switch-container {
+                margin-bottom: 0 !important;
+                background: #f8fafc;
+                padding: 5px 10px 5px 5px;
+                border-radius: 30px;
+                border: 1px solid #e2e8f0;
+            }
+
+            /* Responsive สำหรับ Dashboard Widget - จอมือถือเท่านั้น */
+            @media screen and (max-width: 600px) {
+                .wfwc-cards {
+                    grid-template-columns: 1fr;
+                    gap: 15px;
+                }
+
+                .wfwc-card {
+                    padding: 15px;
+                }
+
+                .wfwc-card-icon {
+                    font-size: 28px;
+                    width: 36px;
+                    height: 36px;
+                }
+            }
+        </style>
+        <script>
+            jQuery(document).ready(function ($) {
+
+                // [1] Sidebar Post Edit: ย้ายไปปกติ
+                if ($('#postimagediv').length > 0) {
+                    $('#wfwc_upload_control .inside').contents().appendTo('#postimagediv .inside');
+                    $('#postimagediv .inside #wfwc-mb-box').css({ 'margin-bottom': '15px', 'display': 'block' });
+                    $('#wfwc_upload_control').hide();
+                }
+
+                // [2] Media Edit: ย้ายไปเป็นแถบยาว (Full Width Row)
+                if ($('.cm-media-preview').length > 0) {
+                    var $customWrapper = $('<div id="wfwc-custom-media-bar"></div>');
+                    $customWrapper.insertBefore('.cm-media-preview');
+                    $('#wfwc_upload_control .inside').contents().appendTo($customWrapper);
+                    $('.cm-media-preview').parent().css('flex-wrap', 'wrap');
+                    $('#wfwc_upload_control').hide();
+                }
+
+                // Effect ปุ่มบันทึก Settings
+                $('.wfwc-settings-box form').on('submit', function () {
+                    var btn = $(this).find('button[type="submit"]');
+                    var originalWidth = btn.outerWidth();
+                    btn.css('min-width', originalWidth);
+                    btn.html('<span class="dashicons dashicons-update wfwc-loading-icon"></span> <span>กำลังบันทึก...</span>');
+                    btn.addClass('wfwc-btn-saving');
+                });
+
+                // Toggle Action
+                $(document).on('click', '.wfwc-ajax-toggle', function (e) {
+                    e.preventDefault();
+                    var btn = $(this);
+                    var type = btn.attr('data-type') || 'upload';
+                    var originalText = btn.text();
+                    var allBtns = $(`.wfwc-ajax-toggle[data-type="${type}"]`);
+
+                    allBtns.prop('disabled', true).css('opacity', 0.5).text('Working...');
+
+                    $.post(ajaxurl, {
+                        action: 'wfwc_toggle_upload',
+                        wfwc_security: '<?php echo wp_create_nonce(self::NONCE_ACTION); ?>',
+                        type: type
+                    }, function (res) {
+                        if (res.success) {
+                            var status = res.data.status;
+                            var timeoutLabel = res.data.timeout_label;
+                            var expireTime = res.data.expire_time;
+                            var newPerm = res.data.new_perm;
+
+                            var pathName = window.location.pathname;
+                            var isPostPage = pathName.indexOf('post-new.php') !== -1 || pathName.indexOf('post.php') !== -1;
+
+                            if (isPostPage) {
+                                updateAllUploadUI(status, timeoutLabel, expireTime, newPerm);
+                                allBtns.prop('disabled', false).css('opacity', 1);
                             } else {
-                                $('#wfwc-mb-timer').slideUp();
+                                location.reload();
                             }
-
-                            // สลับคลาสปุ่มในหน้าเขียนโพสต์
-                            $(`.wfwc-ajax-toggle[data-type="upload"]`).text(txtBtn)
-                                .removeClass('wfwc-btn-open wfwc-btn-close')
-                                .addClass(status ? 'wfwc-btn-close' : 'wfwc-btn-open');
+                        } else {
+                            alert('Error: ' + (res.data || 'Unknown'));
+                            allBtns.prop('disabled', false).css('opacity', 1).text(originalText);
                         }
-
-                        $('#wfwc-gen-key').click(function (e) { e.preventDefault(); var c = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#%^&*', p = ''; for (var i = 0; i < 32; i++)p += c.charAt(Math.floor(Math.random() * c.length)); $('input[name="wfwc_api_key"]').val('sk_' + p); });
-                        function tgl() {
-                            var e = $('input[name="wfwc_enable_email"]').is(':checked');
-                            var a = $('input[name="wfwc_enable_api"]').is(':checked');
-                            $('input[name="wfwc_email"], #wfwc-btn-test').prop('disabled', !e).css('opacity', e ? 1 : 0.5);
-                            $('input[name="wfwc_api_key"],textarea[name="wfwc_allowed_ips"]').prop('disabled', !a).css('opacity', a ? 1 : 0.5);
-                            $('#wfwc-gen-key').prop('disabled', !a);
-                        }
-                        $('input[name="wfwc_enable_email"],input[name="wfwc_enable_api"]').change(tgl); tgl();
-
-                        if (typeof wp !== 'undefined' && wp.media) {
-                            wp.media.view.Modal.prototype.on('open', function () {
-                                setTimeout(function () {
-                                    $('.media-modal-content').addClass('has-wfwc-bar');
-                                    if ($('#wfwc-modal-bar').length === 0) {
-                                        $('.media-modal-content').prepend(wp.template('wfwc-modal-bar')());
-                                    }
-                                }, 100);
-                            });
-                        }
+                    }).fail(function () {
+                        alert('Request Failed. Please try again.');
+                        allBtns.prop('disabled', false).css('opacity', 1).text(originalText);
                     });
-                </script>
-                <?php
-                $s = $this->state();
-                if (!$s['plugin'])
-                    echo '<style>.plugins-php .page-title-action, .upload-plugin, #plugin-information-footer { display: none !important; }</style>';
-                if (!$s['theme'])
-                    echo '<style>.themes-php .page-title-action, .upload-theme { display: none !important; }</style>';
-                if (!$s['upload'])
-                    echo '<style>.upload-php .page-title-action, .upload-php .add-new-h2, .media-new-php .page-title-action, #insert-media-button, .wp-media-buttons, .media-upload-form, a[href*="media-new.php"] { display: none !important; }</style>';
+                });
+
+                function updateAllUploadUI(status, timeoutLabel, expireTime, newPerm) {
+                    var bg = status ? '#f0fdf4' : '#fef2f2'; // พื้นหลังอ่อนๆ สวยๆ
+                    var border = status ? '#16a34a' : '#dc2626'; // สี Border หลัก
+                    var color = status ? '#16a34a' : '#dc2626'; // สีตัวอักษรหลัก
+                    var iconColor = status ? '#16a34a' : '#ef4444';
+
+                    var txtStatusShort = status ? 'Allowed' : 'Locked';
+                    var txtBtn = status ? '🔒 ปิดทันที' : '🔓 เปิด ' + timeoutLabel;
+
+                    // Update Main Box
+                    $('#wfwc-mb-box').css({ 'background': bg, 'border-left-color': border });
+
+                    // Update Text & Icons
+                    $('#wfwc-mb-status-title').text(txtStatusShort).css('color', color);
+                    $('#wfwc-mb-perm').text('Permission: ' + newPerm);
+                    $('.wfwc-info-icon-wrapper span').css('color', iconColor); // เปลี่ยนสีไอคอน
+
+                    // Update Timer
+                    if (status) {
+                        $('#wfwc-mb-timer').html('<span class="dashicons dashicons-clock"></span> ' + expireTime)
+                            .css({ 'display': 'flex', 'color': '#b91c1c', 'background': '#fee2e2' }).slideDown();
+                    } else {
+                        $('#wfwc-mb-timer').slideUp();
+                    }
+
+                    // Update Button
+                    $(`.wfwc-ajax-toggle[data-type="upload"]`).text(txtBtn)
+                        .removeClass('wfwc-btn-open wfwc-btn-close')
+                        .addClass(status ? 'wfwc-btn-close' : 'wfwc-btn-open');
+                }
+
+                $('#wfwc-gen-key').click(function (e) { e.preventDefault(); var c = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#%^&*', p = ''; for (var i = 0; i < 32; i++)p += c.charAt(Math.floor(Math.random() * c.length)); $('input[name="wfwc_api_key"]').val('sk_' + p); });
+                function tgl() {
+                    var e = $('input[name="wfwc_enable_email"]').is(':checked');
+                    var a = $('input[name="wfwc_enable_api"]').is(':checked');
+                    $('input[name="wfwc_email"], #wfwc-btn-test').prop('disabled', !e).css('opacity', e ? 1 : 0.5);
+                    $('input[name="wfwc_api_key"],textarea[name="wfwc_allowed_ips"]').prop('disabled', !a).css('opacity', a ? 1 : 0.5);
+                    $('#wfwc-gen-key').prop('disabled', !a);
+                }
+                $('input[name="wfwc_enable_email"],input[name="wfwc_enable_api"]').change(tgl); tgl();
+
+                if (typeof wp !== 'undefined' && wp.media) {
+                    wp.media.view.Modal.prototype.on('open', function () {
+                        setTimeout(function () {
+                            $('.media-modal-content').addClass('has-wfwc-bar');
+                            if ($('#wfwc-modal-bar').length === 0) {
+                                $('.media-modal-content').prepend(wp.template('wfwc-modal-bar')());
+                            }
+                        }, 100);
+                    });
+                }
+            });
+        </script>
+        <?php
+        $s = $this->state();
+        if (!$s['plugin'])
+            echo '<style>.plugins-php .page-title-action, .upload-plugin, #plugin-information-footer { display: none !important; }</style>';
+        if (!$s['theme'])
+            echo '<style>.themes-php .page-title-action, .upload-theme { display: none !important; }</style>';
+        if (!$s['upload'])
+            echo '<style>.upload-php .page-title-action, .upload-php .add-new-h2, .media-new-php .page-title-action, #insert-media-button, .wp-media-buttons, .media-upload-form, a[href*="media-new.php"] { display: none !important; }</style>';
     }
 
     /* =========================================
@@ -666,20 +778,16 @@ class WP_File_Write_Control
             return ['exists' => false];
         }
 
-        // ล้าง Cache สถานะไฟล์
         clearstatcache(true, $path);
         $perm_num = substr(sprintf('%o', fileperms($path)), -3);
 
-        // [New] เช็คด้วยการ "ลองเขียนไฟล์จริง" (Real Write Test)
-        // เพื่อความชัวร์ที่สุดว่า PHP เขียนได้จริงหรือไม่
         $test_file = $path . '/.wfwc_check.tmp';
         $is_writable = false;
 
         if (@file_put_contents($test_file, 'test') !== false) {
             $is_writable = true;
-            @unlink($test_file); // เขียนได้แล้วลบทิ้ง
+            @unlink($test_file);
         } else {
-            // Fallback: ถ้าเขียนไม่ได้ ลองเช็คฟังก์ชันพื้นฐาน
             $is_writable = is_writable($path);
         }
 
@@ -687,19 +795,27 @@ class WP_File_Write_Control
         $ttl_min = floor($this->get_timeout_seconds() / 60);
         $expire_ts = isset($s['expire_' . $type]) ? $s['expire_' . $type] : 0;
 
+        // Colors & Texts (Better Logic)
+        $is_open = $is_writable;
+
         return [
             'exists' => true,
             'type' => $type,
             'label' => $label,
             'path' => $path,
             'perm' => $perm_num,
-            'is_open' => $is_writable,
-            'color' => $is_writable ? '#16a34a' : '#dc2626',
-            'bg' => $is_writable ? '#dcfce7' : '#fee2e2',
-            'btn_text' => $is_writable ? '🔒 ปิดทันที' : "🔓 เปิด $ttl_min นาที",
-            'btn_class' => $is_writable ? 'wfwc-btn-close' : 'wfwc-btn-open',
-            'status_text' => $is_writable ? 'เปิด' : 'ปิด',
-            'timer_text' => ($is_writable && $expire_ts > time()) ? date('H:i:s', $expire_ts) : ''
+            'is_open' => $is_open,
+            // สีพื้นหลังแบบ Soft
+            'bg' => $is_open ? '#f0fdf4' : '#fef2f2',
+            // สี Border/Text เข้ม
+            'color' => $is_open ? '#16a34a' : '#dc2626',
+            // สี Icon
+            'icon_color' => $is_open ? '#16a34a' : '#ef4444',
+
+            'btn_text' => $is_open ? '🔒 ปิดทันที' : "🔓 เปิด $ttl_min นาที",
+            'btn_class' => $is_open ? 'wfwc-btn-close' : 'wfwc-btn-open',
+            'status_title' => $is_open ? 'Allowed' : 'Locked',
+            'timer_text' => ($is_open && $expire_ts > time()) ? date('H:i:s', $expire_ts) : ''
         ];
     }
 
@@ -713,58 +829,39 @@ class WP_File_Write_Control
         @set_time_limit(0);
 
         $type = sanitize_key($_POST['type'] ?? 'upload');
-        // รับค่า Mode: ถ้าติ๊ก Checkbox จะส่งมาเป็น all_recursive, ถ้าไม่ติ๊ก JS จะส่ง dir_only
-        $req_mode = sanitize_key($_POST['mode'] ?? 'dir_only');
 
-        $s = $this->state(); // ดึงค่าจาก Database
+        $s = $this->state();
 
         $info_current = $this->get_target_info($type);
         $should_open = !$info_current['is_open'];
         $dirs = $this->get_dirs_by_type($type);
 
         if ($should_open) {
-            // [OPEN] เปิดสิทธิ์
-            $this->chmod_dirs($dirs, 0775, $req_mode);
-
-            // --- [จุดสำคัญ 1] บันทึกความทรงจำ ---
-            // จำไว้ว่ารอบนี้เปิดด้วยโหมดอะไร (Turbo หรือ Deep)
-            $s['mode_' . $type] = $req_mode;
-
+            // Always operate in directory-only mode (deep mode removed)
+            $this->chmod_dirs($dirs, 0775);
             $s[$type] = true;
             $s['expire_' . $type] = time() + $this->get_timeout_seconds();
 
             if ($type == 'plugin' || $type == 'theme') {
-                $this->chmod_dirs($this->upgrade_dirs(), 0775, 'dir_only');
+                $this->chmod_dirs($this->upgrade_dirs(), 0775);
                 @chmod(ABSPATH . '.htaccess', 0644);
             }
-            $this->log_activity("เปิด $type (Mode: $req_mode)");
+            $this->log_activity("เปิด $type");
 
         } else {
-            // [CLOSE] ปิดสิทธิ์
-
-            // --- [จุดสำคัญ 2] รื้อฟื้นความทรงจำ ---
-            // ถ้าเคยจำไว้ว่าเปิดด้วย Deep ให้ปิดด้วย Deep (เพื่อความชัวร์)
-            // แต่ถ้าไม่มีในความจำ (เช่น เปิดมาจากเวอร์ชั่นเก่า) ให้เชื่อตามที่หน้าจาส่งมา
-            $closing_mode = isset($s['mode_' . $type]) ? $s['mode_' . $type] : $req_mode;
-
-            $this->chmod_dirs($dirs, 0555, $closing_mode);
-
-            // ล้างความจำ เตรียมไว้รอบหน้า
-            unset($s['mode_' . $type]);
-
+            $this->chmod_dirs($dirs, 0555);
             $s[$type] = false;
             $s['expire_' . $type] = null;
 
             if ($type != 'upload' && !$s['plugin'] && !$s['theme']) {
-                $this->chmod_dirs($this->upgrade_dirs(), 0555, 'dir_only');
+                $this->chmod_dirs($this->upgrade_dirs(), 0555);
                 @chmod(ABSPATH . '.htaccess', 0444);
             }
-            $this->log_activity("ปิด $type (Mode: $closing_mode)");
+            $this->log_activity("ปิด $type");
         }
 
-        $this->save($s); // บันทึกลง DB
+        $this->save($s);
 
-        // ... (ส่วน Verify และ Return JSON) ...
         usleep(500000);
         if (isset($dirs[0])) {
             clearstatcache(true, $dirs[0]);
@@ -790,7 +887,6 @@ class WP_File_Write_Control
         ]);
     }
 
-    // Helper สำหรับดึง Dir ตาม Type
     private function get_dirs_by_type($type)
     {
         if ($type == 'upload')
@@ -818,49 +914,32 @@ class WP_File_Write_Control
                 continue;
 
             $pill_cls = $info['is_open'] ? 'status-open' : 'status-closed';
-            $icon = ($type == 'upload') ? '📤' : (($type == 'plugin') ? '🔌' : '🎨');
+            // ใช้ Dashicons ให้เหมือนกันทุกส่วน
+            $icon_class = ($type == 'upload') ? 'dashicons-upload' : (($type == 'plugin') ? 'dashicons-admin-plugins' : 'dashicons-admin-appearance');
+            $icon_color = $info['icon_color'];
 
-            // [Logic] Deep/Turbo Status
-            // ถ้าเปิดอยู่: เช็คจาก DB ว่าเปิดด้วย Deep ไหม
-            // ถ้าปิดอยู่: Default คือ Unchecked (Turbo)
-            $saved_mode = isset($s['mode_' . $type]) ? $s['mode_' . $type] : 'dir_only';
-            $is_deep_active = $info['is_open'] ? ($saved_mode === 'all_recursive') : false;
-
-            // ถ้าเปิดอยู่ ให้ล็อค Checkbox (disabled)
-            $disabled_attr = $info['is_open'] ? 'disabled' : '';
-
+            // ใช้ Logic เดิมสำหรับหน้า Settings (Card UI)
             ?>
-                        <div id="wfwc-card-<?= $type ?>" class="wfwc-card <?= $info['is_open'] ? 'active' : 'inactive' ?>">
-                            <div class="wfwc-card-top">
-                                <span class="wfwc-card-icon"><?= $icon ?></span>
-                                <span class="wfwc-status-pill <?= $pill_cls ?>"><?= $info['status_text'] ?> : <?= $info['perm'] ?></span>
-                            </div>
+            <div id="wfwc-card-<?= $type ?>" class="wfwc-card <?= $info['is_open'] ? 'active' : 'inactive' ?>">
+                <div class="wfwc-card-top">
+                    <span class="wfwc-card-icon">
+                        <span class="dashicons <?= $icon_class ?>"
+                            style="font-size: 24px; width: 24px; height: 24px; color: <?= $icon_color ?>;"></span>
+                    </span>
+                    <span class="wfwc-status-pill <?= $pill_cls ?>"><?= $info['status_title'] ?> : <?= $info['perm'] ?></span>
+                </div>
 
-                            <h3 class="wfwc-card-title"><?= $info['label'] ?></h3>
+                <h3 class="wfwc-card-title"><?= $info['label'] ?></h3>
 
-                            <?php if ($type === 'upload'): ?>
-                                <label class="wfwc-switch-container" title="Apply to sub-folders and files">
-                                    <input type="checkbox" class="wfwc-switch-input" name="wfwc_deep_check_<?= $type ?>" value="1" 
-                                        <?php checked($is_deep_active, true); ?> 
-                                        <?= $disabled_attr ?>>
-                    
-                                    <div class="wfwc-switch-track">
-                                        <div class="wfwc-switch-knob"></div>
-                                    </div>
-                    
-                                    <span class="wfwc-switch-label">🐢 Deep Mode</span>
-                                </label>
-                            <?php endif; ?>
+                <button class="wfwc-btn wfwc-ajax-toggle <?= $info['btn_class'] ?>" data-type="<?= $type ?>">
+                    <?= $info['btn_text'] ?>
+                </button>
 
-                            <button class="wfwc-btn wfwc-ajax-toggle <?= $info['btn_class'] ?>" data-type="<?= $type ?>">
-                                <?= $info['btn_text'] ?>
-                            </button>
-
-                            <?php if ($info['timer_text']): ?>
-                                    <div class="wfwc-timer">⏱️ Auto: <?= $info['timer_text'] ?></div>
-                            <?php endif; ?>
-                        </div>
-                        <?php
+                <?php if ($info['timer_text']): ?>
+                    <div class="wfwc-timer">⏱️ Auto: <?= $info['timer_text'] ?></div>
+                <?php endif; ?>
+            </div>
+            <?php
         }
         echo '</div>';
     }
@@ -871,16 +950,12 @@ class WP_File_Write_Control
         if (!$is_widget)
             echo '<div class="wfwc-section-title">📜 Logs (Activity History)</div>';
 
-        // ปรับหัวตารางเป็น Device / IP
         echo '<div class="wfwc-table-container"><table class="wfwc-table"><thead><tr><th>Time</th><th>User</th><th>Action</th>' . (!$is_widget ? '<th>Device / IP</th>' : '') . '</tr></thead><tbody>';
 
         foreach ($logs as $l) {
             $act = $l['action'];
-
-            // ดึงค่า Device และ IP 
             $device = isset($l['device']) ? $l['device'] : 'Unknown';
             $ip = isset($l['ip']) ? $l['ip'] : '-';
-
             $row_style = 'background-color: #ffffff;';
             $act_html = $act;
 
@@ -895,7 +970,6 @@ class WP_File_Write_Control
                 $act_html = '<span style="color:#1e40af;">⚙️ ' . $act . '</span>';
             }
 
-            // แสดงผล: เอา Device ไว้บรรทัดบน, IP ไว้บรรทัดล่าง (ตัวเล็ก)
             echo "<tr style='$row_style'>
                     <td>{$l['time']}</td>
                     <td><strong>{$l['user']}</strong></td>
@@ -911,11 +985,8 @@ class WP_File_Write_Control
 
     private function audit_table()
     {
-        // [แก้ไข 1] ใช้ Path เดียวกับที่ระบบใช้สั่งงานจริง (เพื่อความแม่นยำ)
         $u = wp_upload_dir();
         $upload_path = $u['basedir'];
-
-        // [แก้ไข 2] ล้าง Cache สถานะไฟล์แบบ Force เพื่อให้ได้ค่าล่าสุดจริงๆ
         clearstatcache(true);
 
         $paths = [
@@ -923,7 +994,7 @@ class WP_File_Write_Control
             'wp-content' => WP_CONTENT_DIR,
             'wp-config.php' => ABSPATH . 'wp-config.php',
             '.htaccess' => ABSPATH . '.htaccess',
-            'Uploads' => $upload_path, // ใช้ค่า Dynamic จากระบบ
+            'Uploads' => $upload_path,
             'Plugins' => WP_CONTENT_DIR . '/plugins',
             'Themes' => WP_CONTENT_DIR . '/themes',
             'Upgrade (Temp)' => WP_CONTENT_DIR . '/upgrade'
@@ -939,14 +1010,11 @@ class WP_File_Write_Control
 
             $w = is_writable($path);
             $perm = substr(sprintf('%o', fileperms($path)), -3);
-
-            // Logic สีและการแสดงผล
             $row_style = $w ? 'background-color: #fee2e2;' : 'background-color: #d1fae5;';
             $status_html = $w
                 ? '<span style="color:#991b1b; font-weight:bold;">🔓 Writable (ความเสี่ยง)</span>'
                 : '<span style="color:#065f46; font-weight:bold;">✓ Locked (ปลอดภัย)</span>';
 
-            // เพิ่ม Tooltip บอก Path จริง เพื่อให้ตรวจสอบง่ายขึ้น
             echo "<tr style='$row_style'>
                     <td>
                         <strong>" . esc_html($name) . "</strong><br>
@@ -983,109 +1051,109 @@ class WP_File_Write_Control
     {
         $settings = $this->get_settings();
         ?>
-                <div class="wfwc-wrapper">
-                    <div class="wfwc-container">
+        <div class="wfwc-wrapper">
+            <div class="wfwc-container">
 
-                        <div class="wfwc-header">
-                            <h1>🔐 File Write Control</h1>
-                            <p>ระบบควบคุมความปลอดภัยและตรวจสอบสิทธิ์ไฟล์</p><?php if ($settings['enable_email']): ?>
-                                    <div class="wfwc-email-alert">🔔 Alert Email: <?= esc_html($settings['email']) ?></div><?php endif; ?>
-                        </div>
-
-                        <div class="wfwc-section-title">🎛️ Control Panel</div>
-                        <?php $this->control_ui(); ?>
-
-                        <div class="wfwc-section-title">🔍 Audit</div>
-                        <?php $this->audit_table(); ?>
-                        <?php $this->render_log_history(10); ?>
-
-                        <div class="wfwc-section-title">⚙️ Settings</div>
-                        <div class="wfwc-settings-box">
-                            <form method="post" action="<?= admin_url('admin-post.php') ?>">
-                                <input type="hidden" name="action" value="wfwc_save_settings">
-                                <?php wp_nonce_field('wfwc_save_settings_nonce'); ?>
-
-                                <div class="wfwc-form-group"
-                                    style="background:#f8fafc; padding:15px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:20px;">
-                                    <div class="wfwc-form-header">
-                                        <label class="wfwc-switch">
-                                            <input type="checkbox" name="wfwc_enable_email" value="1" <?php checked($settings['enable_email'], 1); ?>>
-                                            <span class="slider"></span>
-                                        </label>
-                                        <label style="font-weight:bold; color:#334155;">Enable Email Notification</label>
-                                    </div>
-                                    <div style="margin-top:10px; margin-left:46px;">
-                                        <div style="font-size:12px; color:#64748b; margin-bottom:5px;">
-                                            ระบุอีเมลผู้ดูแลระบบเพื่อรับแจ้งเตือนเมื่อมีการเปิดสิทธิ์ไฟล์</div>
-                                        <div style="display:flex; gap:10px;">
-                                            <input type="email" name="wfwc_email" class="wfwc-form-control"
-                                                value="<?= esc_attr($settings['email']) ?>" placeholder="admin@example.com">
-                                            <button type="submit" id="wfwc-btn-test"
-                                                formaction="<?= admin_url('admin-post.php?action=wfwc_test_email') ?>" class="button">✉️
-                                                Test</button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="wfwc-form-group"
-                                    style="background:#f8fafc; padding:15px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:20px;">
-                                    <div class="wfwc-form-header">
-                                        <span style="font-size:18px; margin-right:10px; color:#334155;">⏱️</span>
-                                        <label style="font-weight:bold; color:#334155;">Auto-Disable Timeout</label>
-                                    </div>
-                                    <div style="margin-top:5px; margin-left:38px;">
-                                        <div style="font-size:12px; color:#64748b; margin-bottom:5px;">ระยะเวลา (นาที)
-                                            ที่ระบบจะทำการปิดสิทธิ์ไฟล์ให้อัตโนมัติเมื่อครบกำหนด</div>
-                                        <input type="number" name="wfwc_timeout" class="wfwc-form-control"
-                                            value="<?= esc_attr($settings['timeout']) ?>" min="1" max="1440" style="max-width:150px;">
-                                    </div>
-                                </div>
-
-                                <div class="wfwc-form-group"
-                                    style="background:#f8fafc; padding:15px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:20px;">
-                                    <div class="wfwc-form-header">
-                                        <label class="wfwc-switch">
-                                            <input type="checkbox" name="wfwc_enable_api" value="1" <?php checked($settings['enable_api'], 1); ?>>
-                                            <span class="slider"></span>
-                                        </label>
-                                        <label style="font-weight:bold; color:#334155;">Enable API Access</label>
-                                    </div>
-
-                                    <div style="margin-top:15px; margin-left:46px;">
-                                        <div style="margin-bottom:15px;">
-                                            <label
-                                                style="font-size:12px; font-weight:bold; color:#475569; display:block; margin-bottom:4px;">
-                                                Secret Key (Header: <code>X-WFWC-SECRET</code>)
-                                            </label>
-                                            <div style="display:flex; gap:10px;">
-                                                <input type="text" name="wfwc_api_key" class="wfwc-form-control"
-                                                    value="<?= esc_attr($settings['api_key']) ?>" placeholder="Ex. sk_...">
-                                                <button class="button" id="wfwc-gen-key">🎲 Gen</button>
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label
-                                                style="font-size:12px; font-weight:bold; color:#475569; display:block; margin-bottom:4px;">
-                                                Allowed IPs (Whitelist)
-                                            </label>
-                                            <textarea name="wfwc_allowed_ips" class="wfwc-form-control" rows="3"
-                                                placeholder="192.168.1.1"><?= esc_textarea($settings['allowed_ips']) ?></textarea>
-                                            <div style="font-size:11px; color:#9ca3af; margin-top:2px;">ระบุ IP ที่อนุญาตให้ใช้งาน API
-                                                (บรรทัดละ 1 IP)</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <button type="submit" class="wfwc-btn wfwc-btn-open" style="width:auto; padding: 12px 30px;">
-                                    💾 บันทึกการตั้งค่า
-                                </button>
-                            </form>
-                        </div>
-
-                    </div>
+                <div class="wfwc-header">
+                    <h1>🔐 File Write Control</h1>
+                    <p>ระบบควบคุมความปลอดภัยและตรวจสอบสิทธิ์ไฟล์</p><?php if ($settings['enable_email']): ?>
+                        <div class="wfwc-email-alert">🔔 Alert Email: <?= esc_html($settings['email']) ?></div><?php endif; ?>
                 </div>
-                <?php
+
+                <div class="wfwc-section-title">🎛️ Control Panel</div>
+                <?php $this->control_ui(); ?>
+
+                <div class="wfwc-section-title">🔍 Audit</div>
+                <?php $this->audit_table(); ?>
+                <?php $this->render_log_history(10); ?>
+
+                <div class="wfwc-section-title">⚙️ Settings</div>
+                <div class="wfwc-settings-box">
+                    <form method="post" action="<?= admin_url('admin-post.php') ?>">
+                        <input type="hidden" name="action" value="wfwc_save_settings">
+                        <?php wp_nonce_field('wfwc_save_settings_nonce'); ?>
+
+                        <div class="wfwc-form-group"
+                            style="background:#f8fafc; padding:15px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:20px;">
+                            <div class="wfwc-form-header">
+                                <label class="wfwc-switch">
+                                    <input type="checkbox" name="wfwc_enable_email" value="1" <?php checked($settings['enable_email'], 1); ?>>
+                                    <span class="slider"></span>
+                                </label>
+                                <label style="font-weight:bold; color:#334155;">Enable Email Notification</label>
+                            </div>
+                            <div style="margin-top:10px; margin-left:46px;">
+                                <div style="font-size:12px; color:#64748b; margin-bottom:5px;">
+                                    ระบุอีเมลผู้ดูแลระบบเพื่อรับแจ้งเตือนเมื่อมีการเปิดสิทธิ์ไฟล์</div>
+                                <div style="display:flex; gap:10px;">
+                                    <input type="email" name="wfwc_email" class="wfwc-form-control"
+                                        value="<?= esc_attr($settings['email']) ?>" placeholder="admin@example.com">
+                                    <button type="submit" id="wfwc-btn-test"
+                                        formaction="<?= admin_url('admin-post.php?action=wfwc_test_email') ?>" class="button">✉️
+                                        Test</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wfwc-form-group"
+                            style="background:#f8fafc; padding:15px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:20px;">
+                            <div class="wfwc-form-header">
+                                <span style="font-size:18px; margin-right:10px; color:#334155;">⏱️</span>
+                                <label style="font-weight:bold; color:#334155;">Auto-Disable Timeout</label>
+                            </div>
+                            <div style="margin-top:5px; margin-left:38px;">
+                                <div style="font-size:12px; color:#64748b; margin-bottom:5px;">ระยะเวลา (นาที)
+                                    ที่ระบบจะทำการปิดสิทธิ์ไฟล์ให้อัตโนมัติเมื่อครบกำหนด</div>
+                                <input type="number" name="wfwc_timeout" class="wfwc-form-control"
+                                    value="<?= esc_attr($settings['timeout']) ?>" min="1" max="1440" style="max-width:150px;">
+                            </div>
+                        </div>
+
+                        <div class="wfwc-form-group"
+                            style="background:#f8fafc; padding:15px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:20px;">
+                            <div class="wfwc-form-header">
+                                <label class="wfwc-switch">
+                                    <input type="checkbox" name="wfwc_enable_api" value="1" <?php checked($settings['enable_api'], 1); ?>>
+                                    <span class="slider"></span>
+                                </label>
+                                <label style="font-weight:bold; color:#334155;">Enable API Access</label>
+                            </div>
+
+                            <div style="margin-top:15px; margin-left:46px;">
+                                <div style="margin-bottom:15px;">
+                                    <label
+                                        style="font-size:12px; font-weight:bold; color:#475569; display:block; margin-bottom:4px;">
+                                        Secret Key (Header: <code>X-WFWC-SECRET</code>)
+                                    </label>
+                                    <div style="display:flex; gap:10px;">
+                                        <input type="text" name="wfwc_api_key" class="wfwc-form-control"
+                                            value="<?= esc_attr($settings['api_key']) ?>" placeholder="Ex. sk_...">
+                                        <button class="button" id="wfwc-gen-key">🎲 Gen</button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label
+                                        style="font-size:12px; font-weight:bold; color:#475569; display:block; margin-bottom:4px;">
+                                        Allowed IPs (Whitelist)
+                                    </label>
+                                    <textarea name="wfwc_allowed_ips" class="wfwc-form-control" rows="3"
+                                        placeholder="192.168.1.1"><?= esc_textarea($settings['allowed_ips']) ?></textarea>
+                                    <div style="font-size:11px; color:#9ca3af; margin-top:2px;">ระบุ IP ที่อนุญาตให้ใช้งาน API
+                                        (บรรทัดละ 1 IP)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="wfwc-btn wfwc-btn-open" style="width:auto; padding: 12px 30px;">
+                            💾 บันทึกการตั้งค่า
+                        </button>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+        <?php
     }
 
     public function harden_upload_folder()
@@ -1113,32 +1181,27 @@ class WP_File_Write_Control
 
     private function get_client_ip()
     {
-        // รายชื่อ Header ที่เป็นไปได้ทั้งหมด เรียงตามความน่าเชื่อถือ
         $headers = [
-            'HTTP_CF_CONNECTING_IP',  // Cloudflare
-            'HTTP_X_REAL_IP',         // Nginx / FastCGI (เจอบ่อยในโฮสต์มหาลัย)
-            'HTTP_X_FORWARDED_FOR',   // Proxy มาตรฐาน
+            'HTTP_CF_CONNECTING_IP',
+            'HTTP_X_REAL_IP',
+            'HTTP_X_FORWARDED_FOR',
             'HTTP_CLIENT_IP',
             'HTTP_X_FORWARDED',
             'HTTP_X_CLUSTER_CLIENT_IP',
             'HTTP_FORWARDED_FOR',
             'HTTP_FORWARDED',
-            'REMOTE_ADDR'             // ค่าพื้นฐาน (ถ้าไม่เจออะไรเลย)
+            'REMOTE_ADDR'
         ];
 
         foreach ($headers as $header) {
             if (!empty($_SERVER[$header])) {
-                // กรณีมาเป็นลิสต์ "IP1, IP2, IP3" ให้เอาตัวแรกสุด
                 $ip_array = explode(',', $_SERVER[$header]);
                 $ip = trim($ip_array[0]);
-
-                // ตรวจสอบรูปแบบ IP ว่าถูกต้องไหม (รองรับทั้ง IPv4 และ IPv6)
                 if (filter_var($ip, FILTER_VALIDATE_IP)) {
                     return $ip;
                 }
             }
         }
-
         return sanitize_text_field($_SERVER['REMOTE_ADDR'] ?? 'Unknown');
     }
 
@@ -1151,7 +1214,6 @@ class WP_File_Write_Control
             'enable_api' => 0,
             'api_key' => '',
             'allowed_ips' => '',
-            // 'enable_mode_selector' => 1 // Deprecated
         ];
         return wp_parse_args(get_option(self::SETTINGS_KEY, []), $defaults);
     }
@@ -1226,7 +1288,6 @@ class WP_File_Write_Control
         check_admin_referer('wfwc_save_settings_nonce');
 
         $input = [
-            // [ใหม่] รับค่า Settings (ตัด mode_selector ออก)
             'enable_email' => isset($_POST['wfwc_enable_email']) ? 1 : 0,
             'email' => sanitize_email($_POST['wfwc_email']),
             'timeout' => absint($_POST['wfwc_timeout']),
@@ -1263,57 +1324,34 @@ class WP_File_Write_Control
         $now = time();
         $chg = false;
 
-        // 1. จัดการ Uploads
         if ($s['upload'] && $s['expire_upload'] && $now > $s['expire_upload']) {
-            // [จุดสำคัญ] ดึงความจำมาดูว่าเปิดด้วยโหมดอะไร (ถ้าไม่มี ใช้ค่า Default คือ dir_only)
-            $closing_mode = isset($s['mode_upload']) ? $s['mode_upload'] : 'dir_only';
-
-            // สั่งปิดด้วยโหมดนั้น
-            $this->chmod_dirs($this->upload_dirs(), 0555, $closing_mode);
-
-            // Reset ค่า
+            $this->chmod_dirs($this->upload_dirs(), 0555);
             $s['upload'] = false;
             $s['expire_upload'] = null;
-            unset($s['mode_upload']); // ล้างความจำทิ้ง
-
             $chg = true;
-            $this->log_activity("Auto Disable Uploads (Mode: $closing_mode)");
+            $this->log_activity("Auto Disable Uploads");
         }
 
-        // 2. จัดการ Plugins
         if ($s['plugin'] && $s['expire_plugin'] && $now > $s['expire_plugin']) {
-            $closing_mode = isset($s['mode_plugin']) ? $s['mode_plugin'] : 'dir_only';
-
-            $this->chmod_dirs($this->plugin_dirs(), 0555, $closing_mode);
-
+            $this->chmod_dirs($this->plugin_dirs(), 0555);
             $s['plugin'] = false;
             $s['expire_plugin'] = null;
-            unset($s['mode_plugin']);
-
             if (!$s['theme']) {
-                $this->chmod_dirs($this->upgrade_dirs(), 0555, 'dir_only');
+                $this->chmod_dirs($this->upgrade_dirs(), 0555);
             }
-
             $chg = true;
-            $this->log_activity("Auto Disable Plugins (Mode: $closing_mode)");
+            $this->log_activity("Auto Disable Plugins");
         }
 
-        // 3. จัดการ Themes
         if ($s['theme'] && $s['expire_theme'] && $now > $s['expire_theme']) {
-            $closing_mode = isset($s['mode_theme']) ? $s['mode_theme'] : 'dir_only';
-
-            $this->chmod_dirs($this->theme_dirs(), 0555, $closing_mode);
-
+            $this->chmod_dirs($this->theme_dirs(), 0555);
             $s['theme'] = false;
             $s['expire_theme'] = null;
-            unset($s['mode_theme']);
-
             if (!$s['plugin']) {
-                $this->chmod_dirs($this->upgrade_dirs(), 0555, 'dir_only');
+                $this->chmod_dirs($this->upgrade_dirs(), 0555);
             }
-
             $chg = true;
-            $this->log_activity("Auto Disable Themes (Mode: $closing_mode)");
+            $this->log_activity("Auto Disable Themes");
         }
 
         if ($chg)
@@ -1354,15 +1392,20 @@ class WP_File_Write_Control
             $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf'];
             if (!empty($_FILES)) {
                 foreach ($_FILES as $file) {
+                    if (empty($file['name']) || empty($file['tmp_name']))
+                        continue;
                     $check = wp_check_filetype_and_ext($file['tmp_name'], $file['name']);
-                    if (in_array($check['ext'], $allowed_extensions) && $check['proper_filename'] === false)
+                    $ext = strtolower($check['ext'] ?? '');
+                    if (!empty($ext) && in_array($ext, $allowed_extensions)) {
                         $is_safe = true;
+                        break;
+                    }
                 }
             } else {
                 $disp = $request->get_header('content-disposition');
                 if ($disp && preg_match('/filename="(.+?)"/', $disp, $matches)) {
                     $ext = strtolower(pathinfo($matches[1], PATHINFO_EXTENSION));
-                    if (in_array($ext, $allowed_extensions))
+                    if (!empty($ext) && in_array($ext, $allowed_extensions))
                         $is_safe = true;
                 }
             }
@@ -1377,15 +1420,12 @@ class WP_File_Write_Control
 
     public function api_temp_lock()
     {
-        // ถ้าเป็นการกดปุ่มผ่าน AJAX ห้ามยุ่งเด็ดขาด ให้ปุ่มจัดการตัวเอง
         if (defined('DOING_AJAX') && DOING_AJAX) {
             return;
         }
 
-        // ดึงค่าสถานะล่าสุดแบบไม่ผ่าน Cache
         $s = $this->state();
 
-        // ถ้าสถานะในระบบยังเป็น "เปิด" หรือมีเวลา "Expire" เหลืออยู่ ห้ามล็อค
         if (!empty($s['upload']) && $s['upload'] === true) {
             return;
         }
@@ -1393,7 +1433,6 @@ class WP_File_Write_Control
             return;
         }
 
-        // สั่งล็อคเฉพาะเมื่อระบบมั่นใจว่าต้องปิดจริงๆ
         $dirs = $this->upload_dirs();
         if (is_dir($dirs[0])) {
             @chmod($dirs[0], 0555);
@@ -1454,10 +1493,8 @@ class WP_File_Write_Control
         $settings = $this->get_settings();
         $user = wp_get_current_user();
         $username = $user->exists() ? $user->user_login : 'System/API';
-
         $ip = $this->get_client_ip();
-
-        $ua = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown Device';
+        $ua = sanitize_text_field($_SERVER['HTTP_USER_AGENT'] ?? 'Unknown Device');
         $device = 'Unknown';
         if (strpos($ua, 'Chrome') !== false)
             $device = 'Chrome';
@@ -1477,8 +1514,6 @@ class WP_File_Write_Control
             $device .= ' (Linux)';
 
         $time = current_time('d/m/Y H:i:s');
-
-        // 1. บันทึก Log ลง Database (บันทึกทุกกรณี ทั้งเปิดและปิด)
         $entry = ['time' => $time, 'user' => $username, 'action' => $action, 'ip' => $ip, 'device' => $device, 'full_ua' => $ua];
         $logs = get_option(self::LOG_KEY, []);
         if (!is_array($logs))
@@ -1488,15 +1523,15 @@ class WP_File_Write_Control
             array_pop($logs);
         update_option(self::LOG_KEY, $logs);
 
-        // 2. ส่ง Email (แก้ไข: ไม่ส่งถ้าเป็นการ "ปิด")
-        // เช็คว่าในข้อความ $action มีคำว่า "ปิด" หรือ "disable" หรือไม่
         $is_closing = (strpos($action, 'ปิด') !== false || stripos($action, 'disable') !== false);
+        $is_opening = (strpos($action, 'เปิด') !== false || stripos($action, 'enable') !== false || stripos($action, 'open') !== false);
 
+        // ส่งอีเมลเมื่อเปิด (enable) และ Email Notification เปิดอยู่
         if (
-            !empty($settings['enable_email']) &&      // ต้องเปิดระบบ Email ไว้
-            is_email($settings['email']) &&           // อีเมลต้องถูกต้อง
-            strpos($action, 'API') === false &&       // ไม่ใช่งาน API
-            !$is_closing                              // <--- เพิ่มเงื่อนไข: ต้องไม่ใช่การปิด
+            ($settings['enable_email'] == 1 || $settings['enable_email'] === true || $settings['enable_email'] === '1') &&
+            is_email($settings['email']) &&
+            strpos($action, 'API') === false &&
+            $is_opening
         ) {
             $subject = "[Security] มีการแจ้งเตือน: {$action}";
             $message = "🔔 มีการเปลี่ยนแปลงสถานะความปลอดภัยไฟล์\n";
@@ -1527,7 +1562,6 @@ class WP_File_Write_Control
     private function upload_dirs()
     {
         $u = wp_upload_dir();
-        // ส่งกลับเฉพาะโฟลเดอร์หลัก uploads เท่านั้น ไม่เอาโฟลเดอร์ย่อย
         return [$u['basedir']];
     }
 
@@ -1546,31 +1580,17 @@ class WP_File_Write_Control
         return [WP_CONTENT_DIR . '/upgrade'];
     }
 
-    /* =========================================
-     * [CORE] Helper: Change Permission (With Mode Selection)
-     * ========================================= */
-    // [แก้ไข] เพิ่ม Parameter $force_mode = null
-    private function chmod_dirs($dirs, $mode, $force_mode = null)
+    private function chmod_dirs($dirs, $mode)
     {
         if (empty($dirs) || !is_array($dirs))
             return;
-
-        $target_file_mode = ($mode === 0555) ? 0444 : 0644;
-
-        // เช็คว่า User เลือกโหมดไหนมา (ถ้าไม่ส่งมา ให้ใช้ dir_only เป็นค่า Default)
-        $is_deep_mode = ($force_mode === 'all_recursive');
 
         foreach ($dirs as $dir) {
             if (!is_dir($dir))
                 continue;
 
-            if ($is_deep_mode)
-                @set_time_limit(0);
-
-            // 1. เปลี่ยน Folder แม่
             @chmod($dir, $mode);
 
-            // 2. วนลูป
             try {
                 $iterator = new RecursiveIteratorIterator(
                     new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
@@ -1581,11 +1601,6 @@ class WP_File_Write_Control
                     try {
                         if ($item->isDir()) {
                             @chmod($item->getPathname(), $mode);
-                        } elseif ($item->isFile()) {
-                            // [Condition] ทำงานเฉพาะ Deep Mode
-                            if ($is_deep_mode) {
-                                @chmod($item->getPathname(), $target_file_mode);
-                            }
                         }
                     } catch (Exception $e) {
                         continue;
@@ -1594,7 +1609,6 @@ class WP_File_Write_Control
             } catch (Exception $e) {
             }
 
-            // 3. ย้ำ Folder แม่
             @chmod($dir, $mode);
             clearstatcache(true, $dir);
         }
@@ -1615,35 +1629,15 @@ class WP_File_Write_Control
             $info = $this->get_target_info($t);
 
             if ($info['exists']) {
-                $s = $this->state();
-
-                // [Logic Modified] Check for Checkbox State
-                $saved_mode = isset($s['mode_' . $t]) ? $s['mode_' . $t] : 'dir_only';
-                $is_deep_active = $info['is_open'] ? ($saved_mode === 'all_recursive') : false;
-
-                // ถ้าเปิดอยู่ ให้ล็อคปุ่ม
-                $disabled_attr = $info['is_open'] ? 'disabled' : '';
-
                 echo "<div id='wfwc-notice-bar' class='notice' style='background:{$info['bg']}; border-left: 5px solid {$info['color']}; display:flex; align-items:center; justify-content:space-between; padding:10px 20px; margin: 20px 0; box-shadow: 0 1px 1px rgba(0,0,0,.04); transition:0.3s;'>
                     
                     <div style='font-size:14px; color:#333; display:flex; align-items:center;'>
                         <strong>🔐 {$info['label']} Security:</strong> 
-                        <span style='font-weight:bold; color:{$info['color']}; margin-left:5px;'>{$info['status_text']}</span>
+                        <span style='font-weight:bold; color:{$info['color']}; margin-left:5px;'>{$info['status_title']}</span>
                         <code style='background:#fff; padding:2px 6px; border-radius:4px; border:1px solid #ddd; margin-left:8px; font-size:11px;'>{$info['perm']}</code>
                     </div>
 
                     <div style='display:flex; align-items:center; gap:15px;'>
-                        " . ($t === 'upload' ? "
-                        <label class='wfwc-switch-container' style='margin-bottom:0;'>
-                            <input type='checkbox' class='wfwc-switch-input' name='wfwc_deep_check_{$t}' value='1' 
-                                " . checked($is_deep_active, true, false) . " 
-                                $disabled_attr>
-                            <div class='wfwc-switch-track' style='width:36px; height:20px;'>
-                                <div class='wfwc-switch-knob' style='width:16px; height:16px; top:1px; left:1px;'></div>
-                            </div>
-                            <span class='wfwc-switch-label' style='font-size:12px; margin-left:5px;'>🐢 Deep</span>
-                        </label>" : "") . "
-
                         <button class='button wfwc-ajax-toggle {$info['btn_class']}' data-type='{$info['type']}'>
                             {$info['btn_text']}
                         </button>
@@ -1654,17 +1648,9 @@ class WP_File_Write_Control
         }
     }
 
-    public function media_modal_control()
-    {
-        // ... (ส่วนนี้ถูกปิดการใช้งานใน Constructor แล้ว แต่คงไว้เผื่อเปิดใช้ในอนาคต) ...
-    }
-
     public function add_meta_boxes()
     {
-        // 1. เริ่มต้นด้วย post และ page
-        $screens = ['post', 'page'];
-
-        // 2. ค้นหา Post Type ทั้งหมดที่ลงท้ายด้วย _gallery
+        $screens = ['post', 'page', 'attachment'];
         $args = ['public' => true];
         $all_types = get_post_types($args, 'names');
         foreach ($all_types as $pt) {
@@ -1673,7 +1659,6 @@ class WP_File_Write_Control
             }
         }
 
-        // 3. สร้างกล่อง Meta Box
         foreach (array_unique($screens) as $s) {
             add_meta_box('wfwc_upload_control', 'File Write Control', [$this, 'render_meta_box'], $s, 'side', 'high');
         }
@@ -1683,48 +1668,45 @@ class WP_File_Write_Control
     {
         $info = $this->get_target_info('upload');
         if (!$info['exists']) {
-            echo "Error";
+            echo '<div class="notice notice-error"><p>ไม่สามารถตรวจสอบสถานะ Upload directory ได้</p></div>';
             return;
         }
 
-        $s = $this->state();
-
-        $saved_mode = isset($s['mode_upload']) ? $s['mode_upload'] : 'dir_only';
-        $is_deep_active = $info['is_open'] ? ($saved_mode === 'all_recursive') : false;
-
-        $disabled_attr = $info['is_open'] ? 'disabled' : '';
-
-        echo "<div id='wfwc-mb-box' style='margin-top:10px; background:{$info['bg']}; border: 2px solid {$info['color']}; padding:12px; text-align:center; border-radius:6px;'>
+        // [BEAUTIFUL LAYOUT] 
+        // ซ้าย: Icon + Title (Status)
+        // ขวา: Group Action (Timer + Switch + Button)
+        echo "<div id='wfwc-mb-box' style='background:{$info['bg']}; border-left-color:{$info['color']}; transition:0.3s;'>
             
-            <div style='font-size:13px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;'>
-                <strong>📤 Upload:</strong> 
-                <span id='wfwc-mb-status' style='font-weight:bold; color:{$info['color']};'>
-                    {$info['status_text']} ({$info['perm']})
-                </span>
+            <div class='wfwc-info-group'>
+                <div class='wfwc-info-icon-wrapper'>
+                    <span class='dashicons dashicons-shield' style='font-size:20px; height:20px; width:20px; color:{$info['icon_color']};'></span>
+                </div>
+                
+                <div class='wfwc-info-text'>
+                    <div class='wfwc-info-title' id='wfwc-mb-status-title' style='color:{$info['color']};'>
+                        {$info['status_title']}
+                    </div>
+                    <div class='wfwc-info-subtitle' id='wfwc-mb-perm'>
+                        Permission: {$info['perm']}
+                    </div>
+                </div>
             </div>";
 
-        echo "<div style='display:flex; justify-content:center; margin-bottom:10px;'>
-                <label class='wfwc-switch-container' style='margin-bottom:0;'>
-                    <input type='checkbox' class='wfwc-switch-input' name='wfwc_deep_check_upload' value='1' 
-                        " . checked($is_deep_active, true, false) . " 
-                        $disabled_attr>
-                    <div class='wfwc-switch-track'>
-                        <div class='wfwc-switch-knob'></div>
-                    </div>
-                    <span class='wfwc-switch-label' style='margin-left:8px;'>🐢 Deep Mode</span>
-                </label>
+        echo "<div class='wfwc-action-group'>";
+
+        // 1. Timer
+        $dsp = ($info['is_open'] && $info['timer_text']) ? 'flex' : 'none';
+        echo "<div id='wfwc-mb-timer' style='display:$dsp; font-size:12px; font-weight:600; color:#b91c1c; background:#fee2e2; padding:4px 10px; border-radius:20px; align-items:center; gap:5px; white-space:nowrap;'>
+                <span class='dashicons dashicons-clock' style='font-size:14px; width:14px; height:14px;'></span> {$info['timer_text']}
               </div>";
 
-        echo "<button class='button wfwc-ajax-toggle {$info['btn_class']}' data-type='upload' style='width:100%; margin-bottom:5px;'>
+        // 2. Button
+        echo "<button class='button wfwc-ajax-toggle {$info['btn_class']}' data-type='upload'>
                 {$info['btn_text']}
               </button>";
 
-        $dsp = ($info['is_open'] && $info['timer_text']) ? 'block' : 'none';
-        echo "<div id='wfwc-mb-timer' style='display:$dsp; font-size:11px; color:#b91c1c; background:rgba(255,255,255,0.6); padding:4px; border-radius:4px;'>
-                ⏱️ Auto Close: {$info['timer_text']}
-              </div>";
-
-        echo "</div>";
+        echo "</div>"; // End .wfwc-action-group
+        echo "</div>"; // End #wfwc-mb-box
     }
 
 }
