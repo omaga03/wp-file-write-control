@@ -2,7 +2,7 @@
 /*
 Plugin Name: WP File Write Control (Security Dashboard)
 Description: ระบบความปลอดภัยไฟล์ + API Secure + AJAX (Beautiful Full Width Bar UI)
-Version: 7.1.5
+Version: 7.1.6
 Author: IT Admin+RDI Omaga
 */
 
@@ -46,6 +46,9 @@ class WP_File_Write_Control
         add_filter('user_has_cap', [$this, 'block_caps'], 10, 1);
         add_filter('wp_handle_upload_prefilter', [$this, 'block_file_uploads']);
         add_action(self::CRON_HOOK, [$this, 'auto_disable']);
+
+        // Safety: Intercept upgrades if locked
+        add_filter('upgrader_pre_install', [$this, 'prevent_update_if_locked'], 10, 2);
 
         // API Hooks
         add_filter('rest_pre_dispatch', [$this, 'api_temp_unlock'], 10, 3);
@@ -509,8 +512,8 @@ class WP_File_Write_Control
             }
 
             /* =================================================================
-                                                                             * [NEW] BEAUTIFUL FULL WIDTH BAR (Media Edit)
-                                                                             * ================================================================= */
+                                                                                                                             * [NEW] BEAUTIFUL FULL WIDTH BAR (Media Edit)
+                                                                                                                             * ================================================================= */
             #wfwc-custom-media-bar {
                 display: flex;
                 width: 100%;
@@ -623,6 +626,42 @@ class WP_File_Write_Control
                 }
             }
         </style>
+        <?php
+        // [New] Visually disable update buttons if locked
+        if (!$s['plugin']) {
+            echo '<style>
+                .plugins-php .update-message a.update-link, 
+                .plugins-php .plugin-update-tr .update-link,
+                .plugins-php .plugin-update-tr .button-link {
+                    pointer-events: none !important;
+                    opacity: 0.6 !important;
+                    text-decoration: none !important;
+                    cursor: not-allowed !important;
+                    color: #a7aaad !important;
+                }
+                .plugins-php .update-message:after {
+                    content: " (Unlock to Update)";
+                    font-size: smaller;
+                    color: #d63638;
+                }
+            </style>';
+        }
+        if (!$s['theme']) {
+            echo '<style>
+                .themes-php .theme-update, 
+                .themes-php .update-message {
+                    display: block !important; /* Ensure msg is shown */
+                }
+                .themes-php .update-message a,
+                .themes-php .theme-update a {
+                    pointer-events: none !important;
+                    opacity: 0.6 !important;
+                    cursor: not-allowed !important;
+                    color: #a7aaad !important;
+                }
+            </style>';
+        }
+        ?>
         <script>
             jQuery(document).ready(function ($) {
 
@@ -1445,6 +1484,18 @@ class WP_File_Write_Control
         $this->auto_disable();
     }
 
+    public function prevent_update_if_locked($true, $hook_extra)
+    {
+        $s = $this->state();
+        if (isset($hook_extra['plugin']) && !$s['plugin']) {
+            return new WP_Error('wfwc_locked', '⚠️ <b>Safety Block:</b> Please UNLOCK "Plugins" in File Write Control before updating.');
+        }
+        if (isset($hook_extra['theme']) && !$s['theme']) {
+            return new WP_Error('wfwc_locked', '⚠️ <b>Safety Block:</b> Please UNLOCK "Themes" in File Write Control before updating.');
+        }
+        return $true;
+    }
+
     public function deactivate()
     {
         wp_clear_scheduled_hook(self::CRON_HOOK);
@@ -1454,14 +1505,14 @@ class WP_File_Write_Control
     {
         $s = $this->state();
         if (!$s['plugin']) {
-            $caps['install_plugins'] = false;
-            $caps['update_plugins'] = false;
+            // $caps['install_plugins'] = false; // Allow visibility (Add New button will appear but page is restricted)
+            // $caps['update_plugins'] = false; // Allow visibility
             $caps['delete_plugins'] = false;
             $caps['edit_plugins'] = false;
         }
         if (!$s['theme']) {
-            $caps['install_themes'] = false;
-            $caps['update_themes'] = false;
+            // $caps['install_themes'] = false; // Allow visibility
+            // $caps['update_themes'] = false; // Allow visibility
             $caps['delete_themes'] = false;
             $caps['edit_themes'] = false;
         }
