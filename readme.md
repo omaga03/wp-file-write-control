@@ -1,6 +1,6 @@
 # WP File Write Control (Security Dashboard)
 
-**Version:** 7.1.5  
+**Version:** 7.1.7  
 **Author:** IT Admin+RDI Omaga  
 **Requires at least:** WordPress 5.0  
 **Tested up to:** WordPress 6.7  
@@ -43,6 +43,12 @@
 3.  **Enable API Access:** เปิดใช้งานหากต้องการเชื่อมต่อจากภายนอก (ต้องสร้าง Secret Key)
 
 ## Changelog
+
+### 7.1.7
+*   **New Feature:** ย้ายแถบควบคุมความปลอดภัย (Security Controls) ของ Plugins และ Themes เข้าไปแทรกอยู่ในตารางอัปเดตหน้า `update-core.php` อย่างกลมกลืน
+*   **New Feature:** ซ่อนแถบควบคุมอัตโนมัติหากไม่มีรายการอัปเดตในส่วนนั้นๆ (ตารางไม่แสดง)
+*   **UX:** ซ่อน Checkbox (Select All และรายการย่อย) ในตารางอัปเดตเมื่อสิทธิ์ถูกล็อก เพื่อลดความสับสน
+*   **Bugfix:** แก้ไขปัญหา CSS Conflict ที่ทำให้ปุ่มเปิด/ปิดสิทธิ์ในหน้าอัปเดตคลิกไม่ได้
 
 ### 7.1.6
 *   **Improvement:** ปรับปรุงระบบแสดงผลการอัพเดท Plugin/Theme ให้มองเห็นจำนวนอัพเดทได้แท้ขณะล็อกอยู่

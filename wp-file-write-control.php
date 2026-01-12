@@ -2,7 +2,7 @@
 /*
 Plugin Name: WP File Write Control (Security Dashboard)
 Description: ระบบความปลอดภัยไฟล์ + API Secure + AJAX (Beautiful Full Width Bar UI)
-Version: 7.1.6
+Version: 7.1.7
 Author: IT Admin+RDI Omaga
 */
 
@@ -512,8 +512,8 @@ class WP_File_Write_Control
             }
 
             /* =================================================================
-                                                                                                                             * [NEW] BEAUTIFUL FULL WIDTH BAR (Media Edit)
-                                                                                                                             * ================================================================= */
+                                                                                                                                                                                                                                     * [NEW] BEAUTIFUL FULL WIDTH BAR (Media Edit)
+                                                                                                                                                                                                                                     * ================================================================= */
             #wfwc-custom-media-bar {
                 display: flex;
                 width: 100%;
@@ -632,12 +632,16 @@ class WP_File_Write_Control
             echo '<style>
                 .plugins-php .update-message a.update-link, 
                 .plugins-php .plugin-update-tr .update-link,
-                .plugins-php .plugin-update-tr .button-link {
+                .plugins-php .plugin-update-tr .button-link,
+                .update-core-php #update-plugins-table .button:not(.wfwc-ajax-toggle) {
                     pointer-events: none !important;
                     opacity: 0.6 !important;
                     text-decoration: none !important;
                     cursor: not-allowed !important;
                     color: #a7aaad !important;
+                }
+                .update-core-php #update-plugins-table .check-column input {
+                    display: none !important;
                 }
                 .plugins-php .update-message:after {
                     content: " (Unlock to Update)";
@@ -649,15 +653,20 @@ class WP_File_Write_Control
         if (!$s['theme']) {
             echo '<style>
                 .themes-php .theme-update, 
-                .themes-php .update-message {
+                .themes-php .update-message,
+                .update-core-php #update-themes-table .button:not(.wfwc-ajax-toggle) {
                     display: block !important; /* Ensure msg is shown */
                 }
                 .themes-php .update-message a,
-                .themes-php .theme-update a {
+                .themes-php .theme-update a,
+                .update-core-php #update-themes-table .button:not(.wfwc-ajax-toggle) {
                     pointer-events: none !important;
                     opacity: 0.6 !important;
                     cursor: not-allowed !important;
                     color: #a7aaad !important;
+                }
+                .update-core-php #update-themes-table .check-column input {
+                    display: none !important;
                 }
             </style>';
         }
@@ -1668,34 +1677,96 @@ class WP_File_Write_Control
     public function render_admin_notices()
     {
         global $pagenow;
-        $t = '';
-        if ($pagenow === 'upload.php')
-            $t = 'upload';
-        elseif ($pagenow === 'plugins.php')
-            $t = 'plugin';
-        elseif ($pagenow === 'themes.php')
-            $t = 'theme';
 
-        if ($t) {
-            $info = $this->get_target_info($t);
+        $targets = [];
+        if ($pagenow === 'upload.php') {
+            $targets[] = 'upload';
+        } elseif ($pagenow === 'plugins.php') {
+            $targets[] = 'plugin';
+        } elseif ($pagenow === 'themes.php') {
+            $targets[] = 'theme';
+        } elseif ($pagenow === 'update-core.php') {
+            // Show both Plugin and Theme controls on Update Core page
+            $targets[] = 'plugin';
+            $targets[] = 'theme';
+        }
 
-            if ($info['exists']) {
-                echo "<div id='wfwc-notice-bar' class='notice' style='background:{$info['bg']}; border-left: 5px solid {$info['color']}; display:flex; align-items:center; justify-content:space-between; padding:10px 20px; margin: 20px 0; box-shadow: 0 1px 1px rgba(0,0,0,.04); transition:0.3s;'>
-                    
-                    <div style='font-size:14px; color:#333; display:flex; align-items:center;'>
-                        <strong>🔐 {$info['label']} Security:</strong> 
-                        <span style='font-weight:bold; color:{$info['color']}; margin-left:5px;'>{$info['status_title']}</span>
-                        <code style='background:#fff; padding:2px 6px; border-radius:4px; border:1px solid #ddd; margin-left:8px; font-size:11px;'>{$info['perm']}</code>
-                    </div>
+        if (!empty($targets)) {
+            foreach ($targets as $t) {
+                $info = $this->get_target_info($t);
 
-                    <div style='display:flex; align-items:center; gap:15px;'>
-                        <button class='button wfwc-ajax-toggle {$info['btn_class']}' data-type='{$info['type']}'>
-                            {$info['btn_text']}
-                        </button>
-                    </div>
+                if ($info['exists']) {
+                    echo "<div id='wfwc-notice-bar-{$t}' class='notice' style='background:{$info['bg']}; border-left: 5px solid {$info['color']}; display:flex; align-items:center; justify-content:space-between; padding:10px 20px; margin: 20px 0 0 0; box-shadow: 0 1px 1px rgba(0,0,0,.04); transition:0.3s;'>
+                        
+                        <div style='font-size:14px; color:#333; display:flex; align-items:center;'>
+                            <strong>🔐 {$info['label']} Security:</strong> 
+                            <span style='font-weight:bold; color:{$info['color']}; margin-left:5px;'>{$info['status_title']}</span>
+                            <code style='background:#fff; padding:2px 6px; border-radius:4px; border:1px solid #ddd; margin-left:8px; font-size:11px;'>{$info['perm']}</code>
+                        </div>
 
-                </div>";
+                        <div style='display:flex; align-items:center; gap:15px;'>
+                            " . ($info['timer_text'] ? "<div class='wfwc-timer' style='margin:0; font-size:12px; padding:4px 8px; background:#fff; border:1px solid #ddd;'>⏱️ {$info['timer_text']}</div>" : "") . "
+                            <button class='button wfwc-ajax-toggle {$info['btn_class']}' data-type='{$info['type']}'>
+                                {$info['btn_text']}
+                            </button>
+                        </div>
+
+                    </div>";
+                }
             }
+        }
+
+        // [Move Bars] Logic for update-core.php
+        if ($pagenow === 'update-core.php') {
+            ?>
+            <script>
+                jQuery(document).ready(function ($) {
+
+                    function injectToTable(barId, tableId) {
+                        var bar = $('#' + barId);
+                        var table = $('#' + tableId);
+
+                        // Check if bar exists
+                        if (bar.length) {
+                            if (table.length) {
+                                // Remove 'notice' class to prevent WP from moving it, and other conflicting classes
+                                bar.removeClass('notice notice-info notice-error notice-success is-dismissible');
+
+                                // Create new row
+                                var newRow = $('<tr class="wfwc-control-row"><td colspan="100%" style="padding:0; border-bottom:1px solid #ccd0d4; background:#fff;"></td></tr>');
+
+                                // Try to find thead to insert BEFORE the first header row (Select All)
+                                var thead = table.find('thead');
+                                if (thead.length) {
+                                    thead.prepend(newRow);
+                                } else {
+                                    table.find('tbody').prepend(newRow);
+                                }
+
+                                // Move bar into the new cell
+                                bar.css({
+                                    'margin': '0',
+                                    'box-shadow': 'none',
+                                    'border': 'none',
+                                    'border-radius': '0',
+                                    'padding': '10px 15px',
+                                    'width': 'auto',
+                                    'max-width': 'none'
+                                }).detach().appendTo(newRow.find('td'));
+                            } else {
+                                // If table does not exist (no updates), hide the bar
+                                bar.hide();
+                            }
+                        }
+                    }
+
+                    // Run immediately and also on window load to be safe
+                    injectToTable('wfwc-notice-bar-plugin', 'update-plugins-table');
+                    injectToTable('wfwc-notice-bar-theme', 'update-themes-table');
+
+                });
+            </script>
+            <?php
         }
     }
 
