@@ -2,7 +2,7 @@
 /*
 Plugin Name: WP File Write Control (Security Dashboard)
 Description: ระบบความปลอดภัยไฟล์ + API Secure + AJAX (Beautiful Full Width Bar UI)
-Version: 7.1.7
+Version: 7.1.8
 Author: IT Admin+RDI Omaga
 */
 
@@ -53,6 +53,24 @@ class WP_File_Write_Control
         // API Hooks
         add_filter('rest_pre_dispatch', [$this, 'api_temp_unlock'], 10, 3);
         add_action('shutdown', [$this, 'api_temp_lock']);
+
+        // GitHub Updater
+        if (is_admin()) {
+            $this->init_github_updater();
+        }
+    }
+
+    public function init_github_updater()
+    {
+        require_once plugin_dir_path(__FILE__) . 'includes/class-wfwc-github-updater.php';
+        if (class_exists('WFWC_GitHub_Updater')) {
+            // Specify your repo details here
+            new WFWC_GitHub_Updater(
+                __FILE__,
+                'omaga03',
+                'wp-file-write-control'
+            );
+        }
     }
 
     /* =========================================
@@ -512,8 +530,8 @@ class WP_File_Write_Control
             }
 
             /* =================================================================
-                                                                                                                                                                                                                                     * [NEW] BEAUTIFUL FULL WIDTH BAR (Media Edit)
-                                                                                                                                                                                                                                     * ================================================================= */
+                                                                                                                                                                                                                                                     * [NEW] BEAUTIFUL FULL WIDTH BAR (Media Edit)
+                                                                                                                                                                                                                                                     * ================================================================= */
             #wfwc-custom-media-bar {
                 display: flex;
                 width: 100%;

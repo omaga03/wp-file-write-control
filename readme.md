@@ -44,6 +44,10 @@
 
 ## Changelog
 
+### 7.1.8
+*   **New Feature:** Added GitHub Updater support. Now updates can be pulled directly from GitHub Releases.
+
+
 ### 7.1.7
 *   **New Feature:** ย้ายแถบควบคุมความปลอดภัย (Security Controls) ของ Plugins และ Themes เข้าไปแทรกอยู่ในตารางอัปเดตหน้า `update-core.php` อย่างกลมกลืน
 *   **New Feature:** ซ่อนแถบควบคุมอัตโนมัติหากไม่มีรายการอัปเดตในส่วนนั้นๆ (ตารางไม่แสดง)
