@@ -25,6 +25,28 @@ if (!class_exists('WFWC_GitHub_Updater')) {
             add_filter("pre_set_site_transient_update_plugins", [$this, "modify_transient"], 10, 1);
             add_filter("plugins_api", [$this, "plugin_popup"], 10, 3);
             add_filter("upgrader_post_install", [$this, "after_install"], 10, 3);
+            add_filter("upgrader_source_selection", [$this, "fix_folder_name"], 10, 4);
+        }
+
+        public function fix_folder_name($source, $remote_source, $upgrader, $hook_extra = null)
+        {
+            global $wp_filesystem;
+
+            $plugin_slug = plugin_basename($this->plugin_file); // folder/file.php
+            $expected_slug = dirname($plugin_slug); // folder
+
+            // If strict check is needed: && $hook_extra['plugin'] === $plugin_slug
+            if (isset($hook_extra['plugin']) && $hook_extra['plugin'] === $plugin_slug) {
+
+                $new_source = trailingslashit($remote_source) . $expected_slug . '/';
+
+                if (trailingslashit($source) !== $new_source) {
+                    $wp_filesystem->move($source, $new_source);
+                    return $new_source;
+                }
+            }
+
+            return $source;
         }
 
         private function get_repository_info()
@@ -42,7 +64,13 @@ if (!class_exists('WFWC_GitHub_Updater')) {
 
             $response = wp_remote_get($url, $args);
 
-            if (is_wp_error($response) || 200 !== wp_remote_retrieve_response_code($response)) {
+            if (is_wp_error($response)) {
+                error_log('WFWC Updater Error: ' . $response->get_error_message());
+                return;
+            }
+
+            if (200 !== wp_remote_retrieve_response_code($response)) {
+                error_log('WFWC Updater HTTP Error: ' . wp_remote_retrieve_response_code($response));
                 return;
             }
 
@@ -65,8 +93,14 @@ if (!class_exists('WFWC_GitHub_Updater')) {
                 $plugin_slug = plugin_basename($this->plugin_file);
                 $version_checked = isset($checked[$plugin_slug]) ? $checked[$plugin_slug] : '0.0';
 
+                // Clean version number
+                $new_version = $this->github_response->tag_name;
+                $new_version = ltrim($new_version, 'v');
+
+                error_log("WFWC Updater Check: Local=$version_checked, Remote=$new_version");
+
                 // Check comparison
-                if (version_compare($this->github_response->tag_name, $version_checked, '>')) {
+                if (version_compare($new_version, $version_checked, '>')) {
                     $new_files = $this->github_response->zipball_url;
 
                     if (!empty($this->github_response->assets) && count($this->github_response->assets) > 0) {
@@ -77,9 +111,10 @@ if (!class_exists('WFWC_GitHub_Updater')) {
 
                     $obj = new stdClass();
                     $obj->slug = $plugin_slug;
-                    $obj->new_version = $this->github_response->tag_name;
+                    $obj->new_version = $new_version;
                     $obj->url = $this->github_response->html_url;
                     $obj->package = $package;
+                    $obj->plugin = $plugin_slug;
 
                     $transient->response[$plugin_slug] = $obj;
                 }
@@ -96,7 +131,7 @@ if (!class_exists('WFWC_GitHub_Updater')) {
 
             $plugin_slug = plugin_basename($this->plugin_file);
 
-            if ($args->slug !== $plugin_slug) {
+            if (!isset($args->slug) || $args->slug !== $plugin_slug) {
                 return $result;
             }
 
@@ -106,12 +141,16 @@ if (!class_exists('WFWC_GitHub_Updater')) {
                 return $result;
             }
 
+            // Clean version
+            $new_version = $this->github_response->tag_name;
+            $new_version = ltrim($new_version, 'v');
+
             $plugin_data = get_plugin_data($this->plugin_file);
 
             $obj = new stdClass();
             $obj->name = $plugin_data['Name'];
             $obj->slug = $plugin_slug;
-            $obj->version = $this->github_response->tag_name;
+            $obj->version = $new_version;
             $obj->author = $plugin_data['AuthorName'];
             $obj->homepage = $this->github_response->html_url;
             $obj->requires = '5.0'; // Default
