@@ -1,6 +1,6 @@
 # WP File Write Control (Security Dashboard)
 
-**Version:** 7.1.7  
+**Version:** 7.1.8  
 **Author:** IT Admin+RDI Omaga  
 **Requires at least:** WordPress 5.0  
 **Tested up to:** WordPress 6.7  
